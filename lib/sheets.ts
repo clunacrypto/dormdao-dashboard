@@ -8,8 +8,6 @@ const PUB_BASE =
   process.env.GOOGLE_SHEETS_CSV_URL?.replace(/[?&]output=csv.*$/, "") ||
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-2qpQGoL6IgPXUCMJRzB5ThYKqHbJ_txIWPIbfFKzT2xWOk_uh2K0I5KDG_pAYeqJI_swfAN3Uk6i/pub";
 
-const LEADERBOARD_GID = "1652810239";
-
 const SKIP_NAMES = new Set([
   "LEADERBOARD",
   "'24-'25 STANDINGS",
@@ -18,6 +16,22 @@ const SKIP_NAMES = new Set([
   "23-24 STANDINGS",
 ]);
 const ARCHIVED_PREFIX = "[ARCHIVED]";
+
+// Known tab names that need special display-name handling
+const TAB_DISPLAY_NAMES: Record<string, string> = {
+  NYU: "NYU",
+  USC: "USC",
+  "ST ANDREWS": "St. Andrews",
+  "BOSTON COLLEGE": "Boston College",
+};
+
+function tabToDisplayName(tabName: string): string {
+  const upper = tabName.toUpperCase().trim();
+  return (
+    TAB_DISPLAY_NAMES[upper] ??
+    tabName.trim().replace(/\w+/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+  );
+}
 
 export interface SchoolRowWithHoldings extends SchoolRow {
   holdings: Holding[];
@@ -61,50 +75,37 @@ async function fetchCsv(gid: string): Promise<string[][]> {
   return data;
 }
 
-function parseLeaderboard(data: string[][]): SchoolRow[] {
-  let colHeaderIdx = -1;
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    const joined = row.join(",").toLowerCase();
-    if (joined.includes("sub dao") && joined.includes("rank") && joined.includes("nav")) {
-      colHeaderIdx = i;
-      break;
-    }
-  }
-  if (colHeaderIdx === -1) return [];
+// Parse the "Sub DAO Summary" block from a school tab.
+// This block contains the authoritative invested capital and deployment stats.
+interface SchoolSummary {
+  investedEth: number;
+  investedUsd: number;
+  pctDeployed: number;
+  avgEntryFdv: number;
+}
 
-  const headers = data[colHeaderIdx].map((h) => h.trim().toLowerCase());
-  const nameIdx = headers.findIndex((h) => h.includes("sub dao") || h.includes("school"));
-  const rankIdx = headers.findIndex((h) => h === "rank");
-  const navIdx = headers.findIndex((h) => h === "nav");
-  const usdIdx = headers.findIndex((h) => h.includes("total return (usd)") || h.includes("return (usd)"));
-  const ethIdx = headers.findIndex((h) => h.includes("total return (eth)") || h.includes("return (eth)"));
-  const fdvIdx = headers.findIndex((h) => h.includes("entry fdv") || h.includes("avg entry"));
-  const depIdx = headers.findIndex((h) => h.includes("deployed"));
+function parseSchoolSummary(data: string[][]): SchoolSummary {
+  let investedEth = 0;
+  let investedUsd = 0;
+  let pctDeployed = 0;
+  let avgEntryFdv = 0;
 
-  const schools: SchoolRow[] = [];
-  let rank = 1;
+  for (const row of data) {
+    const label = (row[1]?.trim() ?? "").toLowerCase();
+    const value = row[4]?.trim() ?? "";
 
-  for (let i = colHeaderIdx + 1; i < data.length; i++) {
-    const row = data[i];
-    const rawName = nameIdx >= 0 ? row[nameIdx]?.trim() : row[1]?.trim();
-    if (!rawName) continue;
-    if (rawName.toLowerCase().includes("member school") || rawName.toLowerCase().includes("position highlights")) break;
+    // Stop scanning once we hit the holdings section
+    if (label === "liquid positions") break;
 
-    schools.push({
-      rank: isValue(row[rankIdx]) ? parseNumber(row[rankIdx]) || rank : rank,
-      name: rawName,
-      slug: slugify(rawName),
-      nav: navIdx >= 0 && isValue(row[navIdx]) ? parseNumber(row[navIdx]) : 0,
-      usdReturn: usdIdx >= 0 && isValue(row[usdIdx]) ? parseNumber(row[usdIdx]) : 0,
-      ethReturn: ethIdx >= 0 && isValue(row[ethIdx]) ? parseNumber(row[ethIdx]) : 0,
-      avgEntryFdv: fdvIdx >= 0 && isValue(row[fdvIdx]) ? parseNumber(row[fdvIdx]) : 0,
-      pctDeployed: depIdx >= 0 && isValue(row[depIdx]) ? parseNumber(row[depIdx]) : 0,
-    });
-    rank++;
+    if (!isValue(value)) continue;
+
+    if (label === "invested capital (eth)") investedEth = parseNumber(value);
+    else if (label === "invested capital (usd)") investedUsd = parseNumber(value);
+    else if (label === "% deployed") pctDeployed = parseNumber(value);
+    else if (label === "average entry fdv") avgEntryFdv = parseNumber(value);
   }
 
-  return schools;
+  return { investedEth, investedUsd, pctDeployed, avgEntryFdv };
 }
 
 function parseHoldings(data: string[][]): Holding[] {
@@ -171,9 +172,6 @@ function parseHoldings(data: string[][]): Holding[] {
   return holdings;
 }
 
-const normalize = (s: string) =>
-  s.toUpperCase().replace(/[^A-Z0-9\s]/g, "").replace(/\s+/g, " ").trim();
-
 async function fetchGeckoPrices(geckoIds: string[]): Promise<Record<string, number>> {
   if (!geckoIds.length) return {};
   try {
@@ -193,84 +191,83 @@ export async function fetchSheetsData(): Promise<{
   schools: SchoolRowWithHoldings[];
   fetchedAt: string;
 }> {
-  const [tabs, leaderboardData] = await Promise.all([
-    discoverTabs(),
-    fetchCsv(LEADERBOARD_GID),
-  ]);
-
-  let schools = parseLeaderboard(leaderboardData);
-
+  // 1. Discover tabs and filter to school tabs only
+  const tabs = await discoverTabs();
   const schoolTabs = tabs.filter(({ name }) => {
     const upper = name.toUpperCase();
     return (
       !SKIP_NAMES.has(upper) &&
       !upper.startsWith(ARCHIVED_PREFIX) &&
       !upper.startsWith("[ARCHIVED]") &&
-      !upper.includes("STANDINGS")
+      !upper.includes("STANDINGS") &&
+      !upper.includes("LEADERBOARD") &&
+      !upper.includes("SUMMARY")
     );
   });
 
+  // 2. Fetch all school tabs in parallel — each tab has its own summary + holdings
   const tabResults = await Promise.all(
     schoolTabs.map(async ({ name, gid }) => {
       const data = await fetchCsv(gid);
-      return { name: name.toUpperCase(), holdings: parseHoldings(data) };
+      const summary = parseSchoolSummary(data);
+      const holdings = parseHoldings(data);
+      return { name, summary, holdings };
     })
   );
 
-  const holdingsMap = new Map<string, Holding[]>();
-  for (const { name, holdings } of tabResults) {
-    holdingsMap.set(normalize(name), holdings);
-  }
-
-  const schoolsWithHoldings: SchoolRowWithHoldings[] = schools.map((school) => {
-    const key = normalize(school.name);
-    const holdings =
-      holdingsMap.get(key) ||
-      (Array.from(holdingsMap.entries()).find(([k]) => k.includes(key) || key.includes(k))?.[1]) ||
-      [];
-    return { ...school, holdings };
-  });
-
-  // The leaderboard sheet has #VALUE! formula errors for NAV and returns.
-  // Compute them from holdings × live prices so the dashboard shows real data.
+  // 3. Collect all CoinGecko IDs needed, including ETH for return calculations
   const geckoIdSet = new Set(["ethereum"]);
-  for (const s of schoolsWithHoldings) {
-    for (const h of s.holdings) {
+  for (const { holdings } of tabResults) {
+    for (const h of holdings) {
       const id = TICKER_TO_COINGECKO[h.ticker];
       if (id) geckoIdSet.add(id);
     }
   }
-
   const priceMap = await fetchGeckoPrices([...geckoIdSet]);
   const ethPrice = priceMap["ethereum"] ?? 0;
 
-  for (const school of schoolsWithHoldings) {
-    // Compute NAV = Σ(tokens × price)
-    if (school.nav === 0) {
-      let computedNav = 0;
-      for (const h of school.holdings) {
+  // 4. Compute each school's metrics from holdings × live prices
+  const schools: SchoolRowWithHoldings[] = tabResults
+    .filter(({ holdings }) => holdings.length > 0)
+    .map(({ name, summary, holdings }) => {
+      // NAV = Σ(tokens × CoinGecko price) — includes the ETH holding (positive or negative)
+      let nav = 0;
+      for (const h of holdings) {
         const geckoId = TICKER_TO_COINGECKO[h.ticker];
-        if (geckoId && priceMap[geckoId] && h.tokens > 0) {
-          computedNav += h.tokens * priceMap[geckoId];
-        }
+        const price = geckoId ? (priceMap[geckoId] ?? 0) : 0;
+        nav += h.tokens * price;
       }
-      if (computedNav > 0) school.nav = computedNav;
-    }
 
-    // Compute ETH return and USD return from cost basis if available
-    if (school.nav > 0 && ethPrice > 0) {
-      const costEth = school.holdings.reduce((s, h) => s + (h.costBasisEth ?? 0), 0);
-      if (costEth > 0) {
-        const navEth = school.nav / ethPrice;
-        if (school.ethReturn === 0) school.ethReturn = ((navEth - costEth) / costEth) * 100;
-        if (school.usdReturn === 0) school.usdReturn = ((school.nav - costEth * ethPrice) / (costEth * ethPrice)) * 100;
+      // ETH return = (current NAV in ETH − invested ETH) / invested ETH
+      let ethReturn = 0;
+      if (nav > 0 && ethPrice > 0 && summary.investedEth > 0) {
+        const navEth = nav / ethPrice;
+        ethReturn = ((navEth - summary.investedEth) / summary.investedEth) * 100;
       }
-    }
-  }
 
-  // Re-rank schools by computed NAV descending
-  schoolsWithHoldings.sort((a, b) => b.nav - a.nav);
-  schoolsWithHoldings.forEach((s, i) => { s.rank = i + 1; });
+      // USD return = (current NAV − invested USD) / invested USD
+      // investedUsd comes from the tab summary (historical ETH price at time of investment)
+      let usdReturn = 0;
+      if (nav > 0 && summary.investedUsd > 0) {
+        usdReturn = ((nav - summary.investedUsd) / summary.investedUsd) * 100;
+      }
 
-  return { schools: schoolsWithHoldings, fetchedAt: new Date().toISOString() };
+      return {
+        rank: 0,
+        name: tabToDisplayName(name),
+        slug: slugify(tabToDisplayName(name)),
+        nav,
+        usdReturn,
+        ethReturn,
+        avgEntryFdv: summary.avgEntryFdv,
+        pctDeployed: summary.pctDeployed,
+        holdings,
+      };
+    });
+
+  // 5. Rank by NAV descending
+  schools.sort((a, b) => b.nav - a.nav);
+  schools.forEach((s, i) => { s.rank = i + 1; });
+
+  return { schools, fetchedAt: new Date().toISOString() };
 }
