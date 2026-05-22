@@ -2,6 +2,7 @@ import Papa from "papaparse";
 import { SchoolRow, Holding } from "@/lib/types";
 export type { Holding } from "@/lib/types";
 import { slugify } from "@/lib/utils";
+import { TICKER_TO_COINGECKO } from "@/lib/tokens";
 
 const PUB_BASE =
   process.env.GOOGLE_SHEETS_CSV_URL?.replace(/[?&]output=csv.*$/, "") ||
@@ -173,6 +174,21 @@ function parseHoldings(data: string[][]): Holding[] {
 const normalize = (s: string) =>
   s.toUpperCase().replace(/[^A-Z0-9\s]/g, "").replace(/\s+/g, " ").trim();
 
+async function fetchGeckoPrices(geckoIds: string[]): Promise<Record<string, number>> {
+  if (!geckoIds.length) return {};
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${geckoIds.join(",")}&vs_currencies=usd`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) return {};
+    const data: Record<string, { usd: number }> = await res.json();
+    return Object.fromEntries(Object.entries(data).map(([id, v]) => [id, v.usd ?? 0]));
+  } catch {
+    return {};
+  }
+}
+
 export async function fetchSheetsData(): Promise<{
   schools: SchoolRowWithHoldings[];
   fetchedAt: string;
@@ -183,15 +199,6 @@ export async function fetchSheetsData(): Promise<{
   ]);
 
   let schools = parseLeaderboard(leaderboardData);
-
-  // If every school has nav=0 the leaderboard response was transient (e.g.
-  // Google Sheets returning "Loading..." for formula cells mid-recalculation).
-  // Retry once immediately — the second fetch almost always has real values.
-  if (schools.length > 0 && schools.every((s) => s.nav === 0)) {
-    const retryData = await fetchCsv(LEADERBOARD_GID);
-    const retrySchools = parseLeaderboard(retryData);
-    if (retrySchools.some((s) => s.nav !== 0)) schools = retrySchools;
-  }
 
   const schoolTabs = tabs.filter(({ name }) => {
     const upper = name.toUpperCase();
@@ -223,6 +230,47 @@ export async function fetchSheetsData(): Promise<{
       [];
     return { ...school, holdings };
   });
+
+  // The leaderboard sheet has #VALUE! formula errors for NAV and returns.
+  // Compute them from holdings × live prices so the dashboard shows real data.
+  const geckoIdSet = new Set(["ethereum"]);
+  for (const s of schoolsWithHoldings) {
+    for (const h of s.holdings) {
+      const id = TICKER_TO_COINGECKO[h.ticker];
+      if (id) geckoIdSet.add(id);
+    }
+  }
+
+  const priceMap = await fetchGeckoPrices([...geckoIdSet]);
+  const ethPrice = priceMap["ethereum"] ?? 0;
+
+  for (const school of schoolsWithHoldings) {
+    // Compute NAV = Σ(tokens × price)
+    if (school.nav === 0) {
+      let computedNav = 0;
+      for (const h of school.holdings) {
+        const geckoId = TICKER_TO_COINGECKO[h.ticker];
+        if (geckoId && priceMap[geckoId] && h.tokens > 0) {
+          computedNav += h.tokens * priceMap[geckoId];
+        }
+      }
+      if (computedNav > 0) school.nav = computedNav;
+    }
+
+    // Compute ETH return and USD return from cost basis if available
+    if (school.nav > 0 && ethPrice > 0) {
+      const costEth = school.holdings.reduce((s, h) => s + (h.costBasisEth ?? 0), 0);
+      if (costEth > 0) {
+        const navEth = school.nav / ethPrice;
+        if (school.ethReturn === 0) school.ethReturn = ((navEth - costEth) / costEth) * 100;
+        if (school.usdReturn === 0) school.usdReturn = ((school.nav - costEth * ethPrice) / (costEth * ethPrice)) * 100;
+      }
+    }
+  }
+
+  // Re-rank schools by computed NAV descending
+  schoolsWithHoldings.sort((a, b) => b.nav - a.nav);
+  schoolsWithHoldings.forEach((s, i) => { s.rank = i + 1; });
 
   return { schools: schoolsWithHoldings, fetchedAt: new Date().toISOString() };
 }

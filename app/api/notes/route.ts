@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Sentiment } from "@/lib/types";
 
+// IP-based rate limit: 10 notes per hour per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60 * 60 * 1000;
+
+function isRateLimited(req: NextRequest): boolean {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT) return true;
+  entry.count++;
+  return false;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const sentiment = searchParams.get("sentiment") as Sentiment | null;
@@ -36,6 +54,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (isRateLimited(req)) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+
   const body = await req.json();
   const { author_name, school, token_ticker, sentiment, content, user_id } = body;
 

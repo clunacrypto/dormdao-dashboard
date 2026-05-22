@@ -227,6 +227,28 @@ export default function TokenDetailPage() {
                     )}
                   </tr>
                 ))}
+                {schoolPositions.length > 1 && (() => {
+                  const totalTokens = schoolPositions.reduce((s, p) => s + p.tokens, 0);
+                  const totalCostEth = schoolPositions.reduce((s, p) => s + p.costBasisEth, 0);
+                  const totalValueUsd = price && totalTokens > 0 ? totalTokens * price.usd : 0;
+                  return (
+                    <tr className="bg-gray-800/30 font-semibold">
+                      <td className="px-5 py-3 text-xs text-gray-400 uppercase tracking-wide">DormDAO Total</td>
+                      <td className="px-5 py-3 text-right font-mono text-white">
+                        {totalTokens > 0 ? totalTokens.toLocaleString(undefined, { maximumFractionDigits: 4 }) : "—"}
+                      </td>
+                      <td className="px-5 py-3 text-right font-mono text-white">
+                        {totalCostEth > 0 ? `${totalCostEth.toFixed(4)} ETH` : "—"}
+                      </td>
+                      <td className="px-5 py-3 text-right font-mono text-gray-400">—</td>
+                      {price && (
+                        <td className="px-5 py-3 text-right font-mono text-white">
+                          {totalValueUsd > 0 ? formatUSD(totalValueUsd, true) : "—"}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
