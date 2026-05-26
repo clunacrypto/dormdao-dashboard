@@ -8,15 +8,17 @@ import {
   ResponsiveContainer,
   LabelList,
 } from "recharts";
+import { useRouter } from "next/navigation";
 import { SchoolRow } from "@/lib/types";
-import { formatUSD } from "@/lib/utils";
+import { formatUSD, slugify } from "@/lib/utils";
 
 export function NavBarChart({ schools }: { schools: SchoolRow[] }) {
+  const router = useRouter();
   const sorted = [...schools].sort((a, b) => a.rank - b.rank);
 
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={sorted} margin={{ top: 5, right: 10, left: 10, bottom: 60 }}>
+      <BarChart data={sorted} margin={{ top: 20, right: 10, left: 10, bottom: 60 }}>
         <XAxis
           dataKey="name"
           tick={{ fill: "#9ca3af", fontSize: 11 }}
@@ -33,12 +35,19 @@ export function NavBarChart({ schools }: { schools: SchoolRow[] }) {
           contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: 8 }}
           labelStyle={{ color: "#f3f4f6" }}
         />
-        <Bar dataKey="nav" radius={[4, 4, 0, 0]} fill="#34d399">
+        <Bar
+          dataKey="nav"
+          radius={[4, 4, 0, 0]}
+          fill="#34d399"
+          cursor="pointer"
+          activeBar={{ fillOpacity: 0.7 }}
+          onClick={(data: any) => router.push(`/schools/${slugify(data.name)}`)}
+        >
           <LabelList
             dataKey="nav"
             position="top"
             formatter={(v: unknown) => formatUSD(Number(v), true)}
-            style={{ fill: "#9ca3af", fontSize: 9 }}
+            style={{ fill: "#6ee7b7", fontSize: 9 }}
           />
         </Bar>
       </BarChart>

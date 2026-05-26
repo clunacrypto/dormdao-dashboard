@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import {
   ScatterChart,
   Scatter,
@@ -8,10 +9,14 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { useRouter } from "next/navigation";
 import { SchoolRow } from "@/lib/types";
-import { formatUSD } from "@/lib/utils";
+import { formatUSD, slugify } from "@/lib/utils";
 
 export function DeploymentScatter({ schools }: { schools: SchoolRow[] }) {
+  const router = useRouter();
+  const [hoveredName, setHoveredName] = useState<string | null>(null);
+
   const data = schools.map((s) => ({
     name: s.name,
     x: s.pctDeployed,
@@ -51,7 +56,27 @@ export function DeploymentScatter({ schools }: { schools: SchoolRow[] }) {
             );
           }}
         />
-        <Scatter data={data} fill="#34d399" fillOpacity={0.8} />
+        <Scatter
+          data={data}
+          fill="#34d399"
+          cursor="pointer"
+          onClick={(point: any) => router.push(`/schools/${slugify(point.name)}`)}
+          onMouseEnter={(point: any) => setHoveredName(point.name)}
+          onMouseLeave={() => setHoveredName(null)}
+          shape={(props: any) => {
+            const { cx, cy, fill, payload } = props;
+            const isHovered = hoveredName === payload.name;
+            return (
+              <circle
+                cx={cx}
+                cy={cy}
+                r={isHovered ? 8 : 5}
+                fill={fill}
+                fillOpacity={isHovered ? 1 : 0.8}
+              />
+            );
+          }}
+        />
       </ScatterChart>
     </ResponsiveContainer>
   );
