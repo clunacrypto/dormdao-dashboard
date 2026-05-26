@@ -46,6 +46,16 @@ export function PriceLineChart({ geckoId, positive }: PriceLineChartProps) {
 
   const color = positive !== false ? "#1D9E75" : "#E24B4A";
 
+  function yTickFormatter(v: number): string {
+    if (data.length < 2) return formatUSD(v, true);
+    const prices = data.map(d => d.price);
+    const range = Math.max(...prices) - Math.min(...prices);
+    if (range < 500) {
+      return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    }
+    return formatUSD(v, true);
+  }
+
   return (
     <div>
       <div className="flex gap-1.5 mb-3">
@@ -84,9 +94,10 @@ export function PriceLineChart({ geckoId, positive }: PriceLineChartProps) {
             />
             <YAxis
               tick={{ fill: tick, fontSize: 10 }}
-              tickFormatter={(v) => formatUSD(v, true)}
+              tickFormatter={yTickFormatter}
               domain={["auto", "auto"]}
-              width={60}
+              width={70}
+              tickCount={5}
             />
             <Tooltip
               formatter={(v) => [formatUSD(Number(v)), "Price"]}
