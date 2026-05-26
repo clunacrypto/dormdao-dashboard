@@ -117,6 +117,21 @@ export default function TokenDetailPage() {
                   {formatPct(price.usd_24h_change)} (24h)
                 </div>
               </>
+            ) : meta?.subnet ? (
+              <div className="inline-flex items-center gap-2">
+                <span className="text-xs bg-purple-900/40 text-purple-300 border border-purple-800/50 px-2 py-1 rounded">Subnet</span>
+                <span className="text-gray-500 text-sm">Bittensor subnet — no market price</span>
+              </div>
+            ) : meta?.vault ? (
+              <div className="inline-flex items-center gap-2">
+                <span className="text-xs bg-blue-900/40 text-blue-300 border border-blue-800/50 px-2 py-1 rounded">Vault</span>
+                <span className="text-gray-500 text-sm">DeFi vault position</span>
+              </div>
+            ) : meta?.premarket ? (
+              <div className="inline-flex items-center gap-2">
+                <span className="text-xs bg-orange-900/40 text-orange-300 border border-orange-800/50 px-2 py-1 rounded">Pre-market</span>
+                <span className="text-gray-500 text-sm">Not yet listed on CoinGecko</span>
+              </div>
             ) : (
               <div className="text-gray-500">Price unavailable</div>
             )}
