@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
   ReferenceLine,
+  LabelList,
 } from "recharts";
 import { SchoolRow } from "@/lib/types";
 import { formatPct } from "@/lib/utils";
@@ -28,6 +29,7 @@ export function EthReturnChart({ schools }: { schools: SchoolRow[] }) {
         <YAxis
           tick={{ fill: "#9ca3af", fontSize: 11 }}
           tickFormatter={(v) => `${v}%`}
+          domain={[Math.min(-90, (Math.floor(Math.min(...sorted.map(s => s.ethReturn)) / 10) - 1) * 10), 'auto']}
         />
         <Tooltip
           formatter={(v) => [formatPct(Number(v)), "ETH Return"]}
@@ -37,8 +39,17 @@ export function EthReturnChart({ schools }: { schools: SchoolRow[] }) {
         <ReferenceLine y={0} stroke="#4b5563" label={{ value: "0%", position: "insideTopRight", fill: "#6b7280", fontSize: 10 }} />
         <Bar dataKey="ethReturn" radius={[4, 4, 0, 0]}>
           {sorted.map((s, i) => (
-            <Cell key={i} fill={s.ethReturn >= 0 ? "#1D9E75" : "#E24B4A"} />
+            <Cell key={i} fill={s.ethReturn >= 0 ? "#34d399" : "#f87171"} />
           ))}
+          <LabelList
+            dataKey="ethReturn"
+            position="top"
+            formatter={(v: unknown) => {
+              const n = Number(v);
+              return `${n >= 0 ? "+" : ""}${n.toFixed(0)}%`;
+            }}
+            style={{ fill: "#6b7280", fontSize: 9 }}
+          />
         </Bar>
       </BarChart>
     </ResponsiveContainer>

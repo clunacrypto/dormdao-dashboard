@@ -1,9 +1,35 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Holding } from "@/lib/types";
 import { formatUSD } from "@/lib/utils";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Download } from "lucide-react";
+
+function exportCsv(holdings: Holding[], prices: Record<string, { usd: number }>, ethPrice: number, schoolName: string) {
+  const headers = ["Token", "Chain", "Tokens", "Cost (ETH)", "Price (USD)", "Value (USD)", "% Portfolio", "Investment Date"];
+  const rows = holdings.map((h) => {
+    const price = prices[h.ticker];
+    const value = price && h.tokens > 0 ? price.usd * h.tokens : null;
+    return [
+      h.ticker,
+      h.blockchain,
+      h.tokens > 0 ? h.tokens : "",
+      h.costBasisEth > 0 ? h.costBasisEth : "",
+      price ? price.usd : "",
+      value !== null ? value.toFixed(2) : "",
+      h.pctOfPortfolio > 0 ? h.pctOfPortfolio.toFixed(1) + "%" : "",
+      h.investmentDate,
+    ];
+  });
+  const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${schoolName.replace(/\s+/g, "-").toLowerCase()}-holdings.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const ABBREV: Record<string, string> = {
   "Vanderbilt": "VAN", "Villanova": "VIL", "Boston College": "BC",
@@ -21,14 +47,15 @@ function abbrev(name: string) {
 interface HoldingsTableClientProps {
   holdings: Holding[];
   otherSchools: Record<string, string[]>;
+  schoolName?: string;
 }
 
-export function HoldingsTableClient({ holdings, otherSchools }: HoldingsTableClientProps) {
+export function HoldingsTableClient({ holdings, otherSchools, schoolName = "school" }: HoldingsTableClientProps) {
   const [prices, setPrices] = useState<Record<string, { usd: number }>>({});
   const [ethPrice, setEthPrice] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchPrices = useCallback(() => {
     const tickers = Array.from(new Set(holdings.map((h) => h.ticker).concat("ETH"))).join(",");
     fetch(`/api/prices?tickers=${encodeURIComponent(tickers)}`)
       .then((r) => r.json())
@@ -38,6 +65,8 @@ export function HoldingsTableClient({ holdings, otherSchools }: HoldingsTableCli
       })
       .finally(() => setLoading(false));
   }, [holdings]);
+
+  useEffect(() => { fetchPrices(); }, [fetchPrices]);
 
   return (
     <div className="overflow-x-auto">

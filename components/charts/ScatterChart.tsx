@@ -51,7 +51,7 @@ export function DeploymentScatter({ schools }: { schools: SchoolRow[] }) {
             );
           }}
         />
-        <Scatter data={data} fill="#1D9E75" fillOpacity={0.8} />
+        <Scatter data={data} fill="#34d399" fillOpacity={0.8} />
       </ScatterChart>
     </ResponsiveContainer>
   );

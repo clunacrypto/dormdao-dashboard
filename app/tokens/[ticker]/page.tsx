@@ -173,6 +173,60 @@ export default function TokenDetailPage() {
         </div>
       )}
 
+      {/* Aggregate DormDAO Position card */}
+      {!loadingSchools && schoolPositions.length > 0 && (() => {
+        const totalTokens = schoolPositions.reduce((s, p) => s + p.tokens, 0);
+        const totalCostEth = schoolPositions.reduce((s, p) => s + p.costBasisEth, 0);
+        const totalValueUsd = price && totalTokens > 0 ? totalTokens * price.usd : 0;
+        const convictionScore = Math.round((schoolPositions.length / 17) * 10);
+        const ethPrice = price?.usd ?? 0;
+        const costUsd = totalCostEth > 0 && ethPrice > 0 ? totalCostEth * ethPrice : null;
+        const pnl = costUsd !== null && totalValueUsd > 0 ? totalValueUsd - costUsd : null;
+        const isProfitable = pnl !== null ? pnl > 0 : null;
+
+        return (
+          <div className={`rounded-xl border p-5 mb-6 ${isProfitable === true ? "border-primary/30 bg-primary/5" : isProfitable === false ? "border-danger/30 bg-danger/5" : "border-gray-800 bg-gray-900/50"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-300">Aggregate DormDAO Position</h2>
+              <div className="flex items-center gap-2">
+                {isProfitable !== null && (
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isProfitable ? "bg-primary/20 text-primary" : "bg-danger/20 text-danger"}`}>
+                    {isProfitable ? "DAO In Profit" : "DAO at Loss"}
+                  </span>
+                )}
+                <span className="text-xs bg-gray-800 text-gray-300 px-2 py-0.5 rounded font-mono">
+                  Conviction: {convictionScore}/10
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Schools Holding</div>
+                <div className="font-mono font-bold text-white">{schoolPositions.length}/17</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Tokens</div>
+                <div className="font-mono font-bold text-white">
+                  {totalTokens > 0 ? totalTokens.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Value</div>
+                <div className="font-mono font-bold text-white">
+                  {totalValueUsd > 0 ? formatUSD(totalValueUsd, true) : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1">DAO P&amp;L</div>
+                <div className={`font-mono font-bold ${pnl === null ? "text-gray-500" : pnl >= 0 ? "text-primary" : "text-danger"}`}>
+                  {pnl !== null ? `${pnl >= 0 ? "+" : ""}${formatUSD(pnl, true)}` : "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Held by DormDAO */}
       <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-gray-800">

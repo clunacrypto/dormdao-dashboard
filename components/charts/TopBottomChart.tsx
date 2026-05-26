@@ -39,7 +39,7 @@ export function TopBottomChart({ schools }: { schools: SchoolRow[] }) {
         <ReferenceLine x={0} stroke="#4b5563" />
         <Bar dataKey="value" radius={[0, 4, 4, 0]}>
           {data.map((entry, i) => (
-            <Cell key={i} fill={entry.value >= 0 ? "#1D9E75" : "#E24B4A"} />
+            <Cell key={i} fill={entry.value >= 0 ? "#34d399" : "#f87171"} />
           ))}
         </Bar>
       </BarChart>

@@ -46,6 +46,9 @@ export interface ResearchNote {
   content: string;
   upvotes: number;
   user_id: string | null;
+  thesis_type: string | null;
+  price_target: number | null;
+  time_horizon: string | null;
 }
 
 export interface DaoStats {

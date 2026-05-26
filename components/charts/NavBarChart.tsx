@@ -6,6 +6,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  LabelList,
 } from "recharts";
 import { SchoolRow } from "@/lib/types";
 import { formatUSD } from "@/lib/utils";
@@ -32,7 +33,14 @@ export function NavBarChart({ schools }: { schools: SchoolRow[] }) {
           contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: 8 }}
           labelStyle={{ color: "#f3f4f6" }}
         />
-        <Bar dataKey="nav" radius={[4, 4, 0, 0]} fill="#1D9E75" />
+        <Bar dataKey="nav" radius={[4, 4, 0, 0]} fill="#34d399">
+          <LabelList
+            dataKey="nav"
+            position="top"
+            formatter={(v: unknown) => formatUSD(Number(v), true)}
+            style={{ fill: "#9ca3af", fontSize: 9 }}
+          />
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toaster";
 
 const SENTIMENTS: Sentiment[] = ["bullish", "neutral", "bearish"];
+const THESIS_TYPES = ["Fundamental", "Technical", "Macro", "On-chain", "Trend"];
+const TIME_HORIZONS = ["Short (< 1 month)", "Medium (1–6 months)", "Long (6+ months)"];
 const SCHOOLS = [
   "Vanderbilt", "Villanova", "Boston College", "Purdue", "Oregon",
   "Michigan", "Columbia", "USC", "Penn", "Cornell",
@@ -52,18 +54,23 @@ export function AddNoteForm({
       })
       .catch(() => {});
   }, [tickersProp]);
+
   const [form, setForm] = useState({
     author_name: initialName || "",
     school: defaultSchool || "",
     token_ticker: defaultTicker || "",
     sentiment: "neutral" as Sentiment,
     content: "",
+    thesis_type: "",
+    price_target: "",
+    time_horizon: "",
   });
 
   const charCount = form.content.length;
   const valid =
     form.author_name.trim().length > 0 &&
-    charCount >= 20 &&
+    form.token_ticker.trim().length > 0 &&
+    charCount >= 100 &&
     charCount <= 2000;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,14 +81,18 @@ export function AddNoteForm({
       const res = await fetch("/api/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, user_id: userId }),
+        body: JSON.stringify({
+          ...form,
+          price_target: form.price_target ? parseFloat(form.price_target) : null,
+          user_id: userId,
+        }),
       });
       if (!res.ok) {
         const { error } = await res.json();
         throw new Error(error);
       }
       toast("Note posted successfully!", "success");
-      setForm((f) => ({ ...f, content: "", sentiment: "neutral" }));
+      setForm((f) => ({ ...f, content: "", sentiment: "neutral", thesis_type: "", price_target: "", time_horizon: "" }));
       setOpen(false);
       onSuccess?.();
     } catch (err) {
@@ -136,13 +147,16 @@ export function AddNoteForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Token</label>
+          <label className="block text-xs text-gray-400 mb-1">Token *</label>
           <select
             value={form.token_ticker}
             onChange={(e) => setForm((f) => ({ ...f, token_ticker: e.target.value }))}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+            className={cn(
+              "w-full bg-gray-800 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50",
+              !form.token_ticker ? "border-amber-600/50" : "border-gray-700"
+            )}
           >
-            <option value="">— Select token —</option>
+            <option value="">— Select token (required) —</option>
             {availableTickers.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
@@ -171,22 +185,63 @@ export function AddNoteForm({
         </div>
       </div>
 
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Thesis Type</label>
+          <select
+            value={form.thesis_type}
+            onChange={(e) => setForm((f) => ({ ...f, thesis_type: e.target.value }))}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+          >
+            <option value="">— Optional —</option>
+            {THESIS_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Price Target (USD)</label>
+          <input
+            type="number"
+            step="any"
+            min="0"
+            value={form.price_target}
+            onChange={(e) => setForm((f) => ({ ...f, price_target: e.target.value }))}
+            placeholder="Optional"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary/50"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Time Horizon</label>
+          <select
+            value={form.time_horizon}
+            onChange={(e) => setForm((f) => ({ ...f, time_horizon: e.target.value }))}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
+          >
+            <option value="">— Optional —</option>
+            {TIME_HORIZONS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div>
         <label className="block text-xs text-gray-400 mb-1">Analysis *</label>
         <textarea
           value={form.content}
           onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-          placeholder="Share your thesis (min 20 chars)..."
+          placeholder="Share your thesis (min 100 chars)..."
           rows={4}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 resize-none"
         />
         <div
           className={cn(
             "text-xs mt-1 text-right",
-            charCount < 20 ? "text-gray-500" : charCount > 2000 ? "text-danger" : "text-gray-400"
+            charCount < 100 ? "text-gray-500" : charCount > 2000 ? "text-danger" : "text-gray-400"
           )}
         >
-          {charCount}/2000
+          {charCount}/2000{charCount < 100 && ` (${100 - charCount} more to go)`}
         </div>
       </div>
 

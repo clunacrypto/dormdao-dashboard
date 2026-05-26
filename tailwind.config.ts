@@ -10,9 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#1D9E75",
-        danger: "#E24B4A",
-        "primary-dark": "#178a63",
+        primary: "#34d399",
+        danger: "#f87171",
+        "primary-dark": "#1D9E75",
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],

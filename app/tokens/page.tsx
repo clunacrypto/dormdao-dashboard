@@ -1,8 +1,9 @@
 import { getSchoolsData, getAllPrices } from "@/lib/cache";
 import { TokensClient, TokenInfo } from "@/components/TokensClient";
+import { SyncFooter } from "@/components/SyncFooter";
 
 export default async function TokensPage() {
-  const [{ schools }, { prices }] = await Promise.all([
+  const [{ schools, fetchedAt }, { prices }] = await Promise.all([
     getSchoolsData(),
     getAllPrices(),
   ]);
@@ -36,6 +37,7 @@ export default async function TokensPage() {
         <p className="text-gray-400 mt-1">{tokens.length} tokens held across DormDAO portfolios</p>
       </div>
       <TokensClient initialTokens={tokens} initialPrices={prices} />
+      <SyncFooter fetchedAt={fetchedAt} />
     </div>
   );
 }

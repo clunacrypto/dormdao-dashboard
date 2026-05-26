@@ -27,8 +27,8 @@ function DashboardSkeleton() {
 }
 
 async function Dashboard() {
-  const { schools } = await getSchoolsData();
-  return <DashboardClient schools={schools} />;
+  const { schools, sinceInceptionSchools, fetchedAt } = await getSchoolsData();
+  return <DashboardClient schools={schools} sinceInceptionSchools={sinceInceptionSchools} fetchedAt={fetchedAt} />;
 }
 
 export default function HomePage() {

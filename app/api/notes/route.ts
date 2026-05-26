@@ -59,14 +59,17 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { author_name, school, token_ticker, sentiment, content, user_id } = body;
+  const { author_name, school, token_ticker, sentiment, content, user_id, thesis_type, price_target, time_horizon } = body;
 
   if (!author_name?.trim()) {
     return NextResponse.json({ error: "Author name required" }, { status: 400 });
   }
-  if (!content || content.trim().length < 20) {
+  if (!token_ticker?.trim()) {
+    return NextResponse.json({ error: "Token is required" }, { status: 400 });
+  }
+  if (!content || content.trim().length < 100) {
     return NextResponse.json(
-      { error: "Content must be at least 20 characters" },
+      { error: "Content must be at least 100 characters" },
       { status: 400 }
     );
   }
@@ -78,18 +81,39 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const { data, error } = await supabase
+
+  // Build insert payload — new columns may not exist yet in DB
+  const insertPayload: Record<string, unknown> = {
+    author_name: author_name.trim(),
+    school: school?.trim() || null,
+    token_ticker: token_ticker.trim().toUpperCase(),
+    sentiment,
+    content: content.trim(),
+    user_id: user_id || null,
+  };
+
+  // Attempt to include new columns; fall back gracefully if they don't exist
+  const withNewFields = {
+    ...insertPayload,
+    thesis_type: thesis_type || null,
+    price_target: price_target ? Number(price_target) : null,
+    time_horizon: time_horizon || null,
+  };
+
+  let { data, error } = await supabase
     .from("research_notes")
-    .insert({
-      author_name: author_name.trim(),
-      school: school?.trim() || null,
-      token_ticker: token_ticker?.trim().toUpperCase() || null,
-      sentiment,
-      content: content.trim(),
-      user_id: user_id || null,
-    })
+    .insert(withNewFields)
     .select()
     .single();
+
+  // If new columns don't exist yet, retry without them
+  if (error?.message?.includes("column")) {
+    ({ data, error } = await supabase
+      .from("research_notes")
+      .insert(insertPayload)
+      .select()
+      .single());
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ note: data }, { status: 201 });

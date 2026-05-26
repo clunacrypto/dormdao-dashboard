@@ -2,33 +2,9 @@ import Papa from "papaparse";
 import { SchoolRow, Holding } from "@/lib/types";
 export type { Holding } from "@/lib/types";
 import { slugify } from "@/lib/utils";
-import { TICKER_TO_COINGECKO } from "@/lib/tokens";
 
-const PUB_BASE =
-  process.env.GOOGLE_SHEETS_CSV_URL?.replace(/[?&]output=csv.*$/, "") ||
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-2qpQGoL6IgPXUCMJRzB5ThYKqHbJ_txIWPIbfFKzT2xWOk_uh2K0I5KDG_pAYeqJI_swfAN3Uk6i/pub";
+const SHEET_ID = "1wA8KoPlhZ1YYv6auM5yYlzjYCBRnG9en9i_qLsrlVZs";
 
-const SKIP_NAMES = new Set([
-  "LEADERBOARD",
-  "'24-'25 STANDINGS",
-  "'23-'24 STANDINGS",
-  "24-25 STANDINGS",
-  "23-24 STANDINGS",
-]);
-
-// Decode JavaScript string hex/unicode escapes that Google Sheets embeds in its HTML,
-// e.g. \x5b → [ and \x5d → ] so that "[ARCHIVED]" tabs are filtered correctly.
-function decodeJsStringEscapes(s: string): string {
-  return s
-    .replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
-    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
-}
-
-function isArchivedTab(name: string): boolean {
-  return name.toUpperCase().includes("ARCHIVED");
-}
-
-// Known tab names that need special display-name handling
 const TAB_DISPLAY_NAMES: Record<string, string> = {
   NYU: "NYU",
   USC: "USC",
@@ -67,23 +43,19 @@ function isValue(s: string | undefined): boolean {
   return true;
 }
 
-async function discoverTabs(): Promise<{ name: string; gid: string }[]> {
-  const res = await fetch(PUB_BASE, { next: { revalidate: 300 } });
-  if (!res.ok) throw new Error(`Failed to fetch pub page: ${res.status}`);
-  const html = await res.text();
-  const chunks = html.split("items.push");
-  const matches: [string, string][] = [];
-  for (const chunk of chunks) {
-    const nameMatch = chunk.match(/name:\s*"([^"]+)"/);
-    const gidMatch = chunk.match(/gid:\s*"(\d+)"/);
-    if (nameMatch && gidMatch) matches.push([decodeJsStringEscapes(nameMatch[1]), gidMatch[1]]);
-  }
-  return matches.map(([name, gid]) => ({ name, gid }));
+// Normalize a school name to a gviz-compatible tab name.
+// Returns candidate names to try in order (first match wins).
+function tabNameCandidates(name: string): string[] {
+  const names: string[] = [name];
+  // "St. Andrews" → "St Andrews" (gviz can't find tabs with dots in names)
+  const noDots = name.replace(/\./g, "");
+  if (noDots !== name) names.push(noDots);
+  return names;
 }
 
-async function fetchCsv(gid: string): Promise<string[][]> {
-  const url = `${PUB_BASE}?output=csv&gid=${gid}`;
-  const res = await fetch(url, { cache: "no-store", redirect: "follow" });
+async function fetchGvizCsv(sheetName: string): Promise<string[][]> {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(sheetName)}&tqx=out:csv`;
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return [];
   const text = await res.text();
   if (text.trimStart().startsWith("<")) return [];
@@ -91,60 +63,105 @@ async function fetchCsv(gid: string): Promise<string[][]> {
   return data;
 }
 
-// Parse the "Sub DAO Summary" block from a school tab.
-// This block contains the authoritative invested capital and deployment stats.
-interface SchoolSummary {
-  investedEth: number;
-  investedUsd: number;
-  pctDeployed: number;
-  avgEntryFdv: number;
-  sheetNav: number | null;
+async function fetchSchoolTabCsv(name: string): Promise<string[][]> {
+  for (const candidate of tabNameCandidates(name)) {
+    const data = await fetchGvizCsv(candidate);
+    // Validate: a real school tab starts with "Sub DAO Summary" or similar in col[1]
+    if (data.length > 0 && data[0]?.[1]?.trim().toLowerCase().includes("sub dao")) {
+      return data;
+    }
+  }
+  return [];
 }
 
-function parseSchoolSummary(data: string[][]): SchoolSummary {
-  let investedEth = 0;
-  let investedUsd = 0;
-  let pctDeployed = 0;
-  let avgEntryFdv = 0;
-  let sheetNav: number | null = null;
+interface LeaderboardEntry {
+  name: string;
+  rank: number;
+  nav: number;
+  usdReturn: number;
+  ethReturn: number;
+  avgEntryFdv: number;
+  pctDeployed: number;
+}
 
-  for (const row of data) {
-    const label = (row[1]?.trim() ?? "").toLowerCase();
-    const value = row[4]?.trim() ?? "";
+function parseLeaderboardSection(data: string[][], sectionMarker: string): LeaderboardEntry[] {
+  let sectionStart = -1;
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].some((c) => c?.trim().includes(sectionMarker))) {
+      sectionStart = i;
+      break;
+    }
+  }
+  if (sectionStart === -1) return [];
 
-    if (label === "liquid positions") break;
-
-    if (isValue(value)) {
-      if (label === "invested capital (eth)") investedEth = parseNumber(value);
-      else if (label === "invested capital (usd)") investedUsd = parseNumber(value);
-      else if (label === "% deployed") pctDeployed = parseNumber(value);
-      else if (label === "average entry fdv") avgEntryFdv = parseNumber(value);
-      else if (label === "total sub dao nav") sheetNav = parseNumber(value);
+  // Stop at the next "Member School Leaderboard" header
+  let sectionEnd = data.length;
+  for (let i = sectionStart + 1; i < data.length; i++) {
+    if (data[i].some((c) => (c?.trim() ?? "").includes("Member School Leaderboard"))) {
+      sectionEnd = i;
+      break;
     }
   }
 
-  return { investedEth, investedUsd, pctDeployed, avgEntryFdv, sheetNav };
+  let dataStart = sectionStart + 1;
+  if (data[dataStart]?.some((c) => c?.trim() === "Sub DAO")) {
+    dataStart++;
+  }
+
+  const entries: LeaderboardEntry[] = [];
+  for (let i = dataStart; i < sectionEnd && entries.length < 20; i++) {
+    const row = data[i];
+    const name = row[1]?.trim();
+    if (!name) continue;
+    const lower = name.toLowerCase();
+    if (lower.includes("average") || lower.includes("total") || lower === "sub dao") continue;
+
+    const rank = parseNumber(row[2]);
+    const nav = parseNumber(row[3]);
+    const usdReturn = parseNumber(row[4]);
+    const ethReturn = parseNumber(row[5]);
+    const avgEntryFdv = parseNumber(row[6]);
+    const pctDeployed = parseNumber(row[7]);
+
+    if (nav === 0) continue;
+
+    entries.push({ name, rank, nav, usdReturn, ethReturn, avgEntryFdv, pctDeployed });
+  }
+  return entries;
+}
+
+function parseLeaderboard(data: string[][]): LeaderboardEntry[] {
+  return parseLeaderboardSection(data, "Member School Leaderboard (2025-2026)");
+}
+
+function parseSinceInception(data: string[][]): LeaderboardEntry[] {
+  return parseLeaderboardSection(data, "Since Inception");
 }
 
 function parseHoldings(data: string[][]): Holding[] {
   let colHeaderIdx = -1;
 
+  // Primary: find "Liquid Positions" section header, then the "Position" column header
   for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    if (row.some((c) => c?.trim() === "Liquid Positions")) {
-      for (let j = i + 1; j < Math.min(i + 4, data.length); j++) {
-        if (data[j].some((c) => c?.trim() === "Position") && data[j].some((c) => c?.trim() === "Tokens")) {
+    if (data[i].some((c) => c?.trim() === "Liquid Positions")) {
+      for (let j = i + 1; j < Math.min(i + 5, data.length); j++) {
+        if (data[j].some((c) => c?.trim() === "Position")) {
           colHeaderIdx = j;
           break;
         }
       }
-      if (colHeaderIdx !== -1) break;
+      break;
     }
-    if (row.some((c) => c?.trim() === "Position") && row.some((c) => c?.trim() === "Tokens") && row.some((c) => c?.trim() === "Price")) {
+  }
+
+  // Fallback: find the first "Position" column header not in an NFT or exited section
+  if (colHeaderIdx === -1) {
+    for (let i = 0; i < data.length; i++) {
+      if (!data[i].some((c) => c?.trim() === "Position")) continue;
       const prevRows = data.slice(Math.max(0, i - 5), i);
-      const precedingNFT = prevRows.some((r) => r.some((c) => c?.trim() === "NFT Positions"));
-      const precedingExited = prevRows.some((r) => r.some((c) => c?.trim()?.includes("Exited")));
-      if (!precedingNFT && !precedingExited) {
+      const isNFT = prevRows.some((r) => r.some((c) => c?.trim() === "NFT Positions"));
+      const isExited = prevRows.some((r) => r.some((c) => c?.trim()?.includes("Exited")));
+      if (!isNFT && !isExited) {
         colHeaderIdx = i;
         break;
       }
@@ -154,35 +171,52 @@ function parseHoldings(data: string[][]): Holding[] {
   if (colHeaderIdx === -1) return [];
 
   const headers = data[colHeaderIdx].map((h) => h?.trim().toLowerCase());
-  const posIdx = headers.findIndex((h) => h === "position");
-  const tokensIdx = headers.findIndex((h) => h === "tokens");
-  const pctIdx = headers.findIndex((h) => h.includes("% of sub dao") || h.includes("% of portfolio"));
-  const chainIdx = headers.findIndex((h) => h === "blockchain");
-  const fdvIdx = headers.findIndex((h) => h.includes("entry fdv"));
-  const costIdx = headers.findIndex((h) => h.includes("cost basis (eth)"));
-  const dateIdx = headers.findIndex((h) => h.includes("investment date"));
+
+  // Positional defaults confirmed from gviz output: col[1]=ticker, col[3]=tokens, col[5]=pct
+  let posIdx = 1;
+  let tokensIdx = 3;
+  let pctIdx = 5;
+  let chainIdx = -1;
+  let fdvIdx = -1;
+  let costIdx = -1;
+  let dateIdx = -1;
+
+  const foundPos = headers.findIndex((h) => h === "position");
+  if (foundPos !== -1) posIdx = foundPos;
+  const foundTokens = headers.findIndex((h) => h === "tokens");
+  if (foundTokens !== -1) tokensIdx = foundTokens;
+  const foundPct = headers.findIndex((h) => h.includes("% of sub dao") || h.includes("% of portfolio"));
+  if (foundPct !== -1) pctIdx = foundPct;
+  chainIdx = headers.findIndex((h) => h === "blockchain");
+  fdvIdx = headers.findIndex((h) => h.includes("entry fdv"));
+  costIdx = headers.findIndex((h) => h.includes("cost basis (eth)"));
+  dateIdx = headers.findIndex((h) => h.includes("investment date"));
 
   const holdings: Holding[] = [];
 
   for (let i = colHeaderIdx + 1; i < data.length; i++) {
     const row = data[i];
-    const rawTicker = posIdx >= 0 ? row[posIdx]?.trim() : "";
+    const rawTicker = row[posIdx]?.trim();
     if (!rawTicker) continue;
+
     if (
       rawTicker === "NFT Positions" ||
       rawTicker === "Liquid Positions (Exited/Trimmed)" ||
       rawTicker.startsWith("Member") ||
       rawTicker === "Position"
     ) break;
+
     if (rawTicker.includes("#") || rawTicker.length > 20) continue;
+    const lower = rawTicker.toLowerCase();
+    if (lower.includes("(exit)") || lower.includes("(trim)")) continue;
 
     holdings.push({
       ticker: rawTicker.toUpperCase(),
       blockchain: chainIdx >= 0 ? (row[chainIdx]?.trim() || "") : "",
-      tokens: tokensIdx >= 0 && isValue(row[tokensIdx]) ? parseNumber(row[tokensIdx]) : 0,
+      tokens: isValue(row[tokensIdx]) ? parseNumber(row[tokensIdx]) : 0,
       entryFdv: fdvIdx >= 0 && isValue(row[fdvIdx]) ? row[fdvIdx]?.trim() || "" : "",
       costBasisEth: costIdx >= 0 && isValue(row[costIdx]) ? parseNumber(row[costIdx]) : 0,
-      pctOfPortfolio: pctIdx >= 0 && isValue(row[pctIdx]) ? parseNumber(row[pctIdx]) : 0,
+      pctOfPortfolio: isValue(row[pctIdx]) ? parseNumber(row[pctIdx]) : 0,
       investmentDate: dateIdx >= 0 && isValue(row[dateIdx]) ? row[dateIdx]?.trim() || "" : "",
     });
   }
@@ -190,119 +224,63 @@ function parseHoldings(data: string[][]): Holding[] {
   return holdings;
 }
 
-const GECKO_BATCH_SIZE = 20;
-
-async function fetchGeckoPrices(geckoIds: string[]): Promise<Record<string, number>> {
-  if (!geckoIds.length) return {};
-
-  const batches: string[][] = [];
-  for (let i = 0; i < geckoIds.length; i += GECKO_BATCH_SIZE) {
-    batches.push(geckoIds.slice(i, i + GECKO_BATCH_SIZE));
-  }
-
-  const results = await Promise.all(
-    batches.map(async (batch) => {
-      try {
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${batch.join(",")}&vs_currencies=usd`,
-          { next: { revalidate: 60 } }
-        );
-        if (!res.ok) return {};
-        const data: Record<string, { usd: number }> = await res.json();
-        return Object.fromEntries(Object.entries(data).map(([id, v]) => [id, v.usd ?? 0]));
-      } catch {
-        return {};
-      }
-    })
-  );
-
-  return Object.assign({}, ...results);
-}
-
 export async function fetchSheetsData(): Promise<{
   schools: SchoolRowWithHoldings[];
+  sinceInceptionSchools: SchoolRow[];
   fetchedAt: string;
 }> {
-  // 1. Discover tabs and filter to school tabs only
-  const tabs = await discoverTabs();
-  const schoolTabs = tabs.filter(({ name }) => {
-    const upper = name.toUpperCase().trim();
-    return (
-      !SKIP_NAMES.has(upper) &&
-      !isArchivedTab(name) &&
-      !upper.includes("STANDINGS") &&
-      !upper.includes("LEADERBOARD") &&
-      !upper.includes("SUMMARY")
-    );
-  });
+  // 1. Fetch leaderboard via gviz
+  const leaderboardData = await fetchGvizCsv("LEADERBOARD");
+  const leaderboardEntries = parseLeaderboard(leaderboardData);
+  const sinceInceptionEntries = parseSinceInception(leaderboardData);
 
-  // 2. Fetch all school tabs in parallel — each tab has its own summary + holdings
-  const tabResults = await Promise.all(
-    schoolTabs.map(async ({ name, gid }) => {
-      const data = await fetchCsv(gid);
-      const summary = parseSchoolSummary(data);
-      const holdings = parseHoldings(data);
-      return { name, summary, holdings };
+  if (leaderboardEntries.length === 0) {
+    return { schools: [], sinceInceptionSchools: [], fetchedAt: new Date().toISOString() };
+  }
+
+  // 2. Fetch holdings for each school in parallel
+  const schoolsWithHoldings = await Promise.all(
+    leaderboardEntries.map(async (entry) => {
+      const tabData = await fetchSchoolTabCsv(entry.name);
+      const holdings = parseHoldings(tabData);
+      return { ...entry, holdings };
     })
   );
 
-  // 3. Collect all CoinGecko IDs needed, including ETH for return calculations
-  const geckoIdSet = new Set(["ethereum"]);
-  for (const { holdings } of tabResults) {
-    for (const h of holdings) {
-      const id = TICKER_TO_COINGECKO[h.ticker];
-      if (id) geckoIdSet.add(id);
-    }
-  }
-  const priceMap = await fetchGeckoPrices([...geckoIdSet]);
-  const ethPrice = priceMap["ethereum"] ?? 0;
+  // 3. Build school rows using leaderboard values directly — no recalculation
+  const schools: SchoolRowWithHoldings[] = schoolsWithHoldings.map((s) => {
+    const displayName = tabToDisplayName(s.name);
+    return {
+      rank: s.rank,
+      name: displayName,
+      slug: slugify(displayName),
+      nav: s.nav,
+      usdReturn: s.usdReturn,
+      ethReturn: s.ethReturn,
+      avgEntryFdv: s.avgEntryFdv,
+      pctDeployed: s.pctDeployed,
+      holdings: s.holdings,
+    };
+  });
 
-  // 4. Compute each school's metrics — prefer sheet-provided values, fall back to live computation
-  const schools: SchoolRowWithHoldings[] = tabResults
-    .filter(({ name, holdings }) => holdings.length > 0 && !isArchivedTab(name))
-    .map(({ name, summary, holdings }) => {
-      // Compute NAV from holdings × live prices as a fallback
-      let computedNav = 0;
-      for (const h of holdings) {
-        const geckoId = TICKER_TO_COINGECKO[h.ticker];
-        const price = geckoId ? (priceMap[geckoId] ?? 0) : 0;
-        computedNav += h.tokens * price;
-      }
+  schools.sort((a, b) => a.rank - b.rank);
 
-      // Prefer the sheet's pre-computed NAV; fall back to live computation
-      const nav = summary.sheetNav !== null && summary.sheetNav > 0
-        ? summary.sheetNav
-        : computedNav;
+  // 4. Build since inception rows (stats only, reuse same display names)
+  const nameToDisplay = new Map(schools.map((s) => [s.name.toLowerCase(), s]));
+  const sinceInceptionSchools: SchoolRow[] = sinceInceptionEntries.map((e) => {
+    const displayName = tabToDisplayName(e.name);
+    const existing = nameToDisplay.get(displayName.toLowerCase());
+    return {
+      rank: e.rank,
+      name: displayName,
+      slug: existing?.slug ?? slugify(displayName),
+      nav: e.nav || existing?.nav || 0,
+      usdReturn: e.usdReturn,
+      ethReturn: e.ethReturn,
+      avgEntryFdv: e.avgEntryFdv,
+      pctDeployed: e.pctDeployed || existing?.pctDeployed || 0,
+    };
+  }).sort((a, b) => a.rank - b.rank);
 
-      // ETH return: always compute from live holdings × prices vs invested ETH
-      let ethReturn = 0;
-      if (computedNav > 0 && ethPrice > 0 && summary.investedEth > 0) {
-        const navEth = computedNav / ethPrice;
-        ethReturn = ((navEth - summary.investedEth) / summary.investedEth) * 100;
-      }
-
-      // USD return: always compute from NAV vs invested USD
-      let usdReturn = 0;
-      if (nav > 0 && summary.investedUsd > 0) {
-        usdReturn = ((nav - summary.investedUsd) / summary.investedUsd) * 100;
-      }
-
-      return {
-        rank: 0,
-        name: tabToDisplayName(name),
-        slug: slugify(tabToDisplayName(name)),
-        nav,
-        usdReturn,
-        ethReturn,
-        avgEntryFdv: summary.avgEntryFdv,
-        pctDeployed: summary.pctDeployed,
-        holdings,
-      };
-    });
-
-  // 5. Rank by NAV descending
-  schools.sort((a, b) => b.nav - a.nav);
-  schools.forEach((s, i) => { s.rank = i + 1; });
-
-  return { schools, fetchedAt: new Date().toISOString() };
+  return { schools, sinceInceptionSchools, fetchedAt: new Date().toISOString() };
 }

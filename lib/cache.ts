@@ -1,11 +1,13 @@
 import { unstable_cache } from "next/cache";
 import { fetchSheetsData, SchoolRowWithHoldings } from "./sheets";
 import { TICKER_TO_COINGECKO } from "./tokens";
+import { SchoolRow } from "./types";
 
 export type { SchoolRowWithHoldings } from "./sheets";
 
 export interface SchoolsCache {
   schools: SchoolRowWithHoldings[];
+  sinceInceptionSchools: SchoolRow[];
   fetchedAt: string;
   totalNAV: number;
   avgUsdReturn: number;
@@ -21,7 +23,7 @@ export interface PricesCache {
 
 export const getSchoolsData = unstable_cache(
   async (): Promise<SchoolsCache> => {
-    const { schools, fetchedAt } = await fetchSheetsData();
+    const { schools, sinceInceptionSchools, fetchedAt } = await fetchSheetsData();
     const len = schools.length || 1;
 
     const totalNAV = schools.reduce((s, x) => s + x.nav, 0);
@@ -37,9 +39,9 @@ export const getSchoolsData = unstable_cache(
       }
     }
 
-    return { schools, fetchedAt, totalNAV, avgUsdReturn, avgEthReturn, avgDeployed, tokenToSchools };
+    return { schools, sinceInceptionSchools, fetchedAt, totalNAV, avgUsdReturn, avgEthReturn, avgDeployed, tokenToSchools };
   },
-  ["schools-data"],
+  ["schools-data-v4"],
   { revalidate: 300 }
 );
 

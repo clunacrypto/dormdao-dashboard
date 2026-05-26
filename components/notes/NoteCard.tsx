@@ -62,6 +62,21 @@ export function NoteCard({ note, currentUserId, onDelete, onUpvote }: NoteCardPr
               ${note.token_ticker}
             </Link>
           )}
+          {note.thesis_type && (
+            <span className="text-xs bg-blue-900/40 text-blue-300 border border-blue-800/50 px-2 py-0.5 rounded">
+              {note.thesis_type}
+            </span>
+          )}
+          {note.time_horizon && (
+            <span className="text-xs bg-purple-900/40 text-purple-300 border border-purple-800/50 px-2 py-0.5 rounded">
+              {note.time_horizon}
+            </span>
+          )}
+          {note.price_target != null && (
+            <span className="text-xs bg-amber-900/40 text-amber-300 border border-amber-800/50 px-2 py-0.5 rounded font-mono">
+              Target: ${note.price_target}
+            </span>
+          )}
           {note.school && (
             <span className="text-xs text-gray-500">{note.school}</span>
           )}

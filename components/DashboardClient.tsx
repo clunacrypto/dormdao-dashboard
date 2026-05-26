@@ -1,74 +1,135 @@
 "use client";
+import { useState } from "react";
 import { KpiCard } from "@/components/ui/Card";
 import { NavBarChart } from "@/components/charts/NavBarChart";
 import { EthReturnChart } from "@/components/charts/EthReturnChart";
 import { TopBottomChart } from "@/components/charts/TopBottomChart";
 import { DeploymentScatter } from "@/components/charts/ScatterChart";
 import { SortableLeaderboard } from "@/components/SortableLeaderboard";
-import { SchoolRow, DaoStats } from "@/lib/types";
+import { SchoolRow } from "@/lib/types";
 import { formatUSD, formatPct } from "@/lib/utils";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-function computeStats(schools: SchoolRow[]): DaoStats {
-  if (!schools.length)
-    return { totalNAV: 0, avgUsdReturn: 0, avgEthReturn: 0, schoolCount: 0, topSchool: "—", avgDeployed: 0 };
-  return {
-    totalNAV: schools.reduce((s, x) => s + x.nav, 0),
-    avgUsdReturn: schools.reduce((s, x) => s + x.usdReturn, 0) / schools.length,
-    avgEthReturn: schools.reduce((s, x) => s + x.ethReturn, 0) / schools.length,
-    schoolCount: schools.length,
-    topSchool: schools[0]?.name ?? "—",
-    avgDeployed: schools.reduce((s, x) => s + x.pctDeployed, 0) / schools.length,
-  };
+function stdDev(values: number[]): number {
+  if (values.length < 2) return 0;
+  const mean = values.reduce((s, v) => s + v, 0) / values.length;
+  const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / (values.length - 1);
+  return Math.sqrt(variance);
 }
 
-export function DashboardClient({ schools }: { schools: SchoolRow[] }) {
-  const stats = computeStats(schools);
+export function DashboardClient({
+  schools,
+  sinceInceptionSchools,
+  fetchedAt,
+}: {
+  schools: SchoolRow[];
+  sinceInceptionSchools: SchoolRow[];
+  fetchedAt: string;
+}) {
+  const [period, setPeriod] = useState<"current" | "inception">("current");
+
+  const activeSchools = period === "current" ? schools : sinceInceptionSchools.length > 0 ? sinceInceptionSchools : schools;
+
+  const totalNAV = schools.reduce((s, x) => s + x.nav, 0);
+  const avgUsdReturn = activeSchools.reduce((s, x) => s + x.usdReturn, 0) / (activeSchools.length || 1);
+  const avgEthReturn = activeSchools.reduce((s, x) => s + x.ethReturn, 0) / (activeSchools.length || 1);
+  const avgDeployed = schools.reduce((s, x) => s + x.pctDeployed, 0) / (schools.length || 1);
+
+  const ethReturns = activeSchools.map((s) => s.ethReturn);
+  const winRate = ethReturns.length > 0
+    ? Math.round((ethReturns.filter((r) => r > 0).length / ethReturns.length) * 100)
+    : 0;
+  const sd = stdDev(ethReturns);
+  const sharpe = sd > 0 ? (avgEthReturn / sd).toFixed(2) : "—";
+
+  const syncedAgo = Math.round((Date.now() - new Date(fetchedAt).getTime()) / 60000);
 
   return (
     <>
+      {/* Period toggle */}
+      {sinceInceptionSchools.length > 0 && (
+        <div className="flex gap-1.5 mb-6">
+          {(["current", "inception"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                period === p
+                  ? "bg-primary/20 border-primary/50 text-primary"
+                  : "bg-transparent border-gray-700 text-gray-400 hover:text-white hover:border-gray-600"
+              }`}
+            >
+              {p === "current" ? "2025–2026" : "Since Inception"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KpiCard label="Total Portfolio NAV" value={formatUSD(stats.totalNAV, true)} />
+        <KpiCard label="Total Portfolio NAV" value={formatUSD(totalNAV, true)} />
         <KpiCard
           label="Avg USD Return"
-          value={formatPct(stats.avgUsdReturn)}
-          positive={stats.avgUsdReturn >= 0}
+          value={formatPct(avgUsdReturn)}
+          positive={avgUsdReturn >= 0}
         />
         <KpiCard
           label="Avg ETH Return"
-          value={formatPct(stats.avgEthReturn)}
-          positive={stats.avgEthReturn >= 0}
+          value={formatPct(avgEthReturn)}
+          positive={avgEthReturn >= 0}
         />
-        <KpiCard label="Avg Deployment" value={formatPct(stats.avgDeployed)} />
+        <KpiCard label="Avg Deployment" value={formatPct(avgDeployed)} />
       </div>
 
+      {/* Analytics row */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="rounded-xl border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
+          <span className="text-xs text-gray-500 mb-1">Win Rate</span>
+          <span className="text-lg font-mono font-bold text-white">{winRate}%</span>
+          <span className="text-xs text-gray-600 mt-0.5">{ethReturns.filter((r) => r > 0).length}/{ethReturns.length} schools positive</span>
+        </div>
+        <div className="rounded-xl border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
+          <span className="text-xs text-gray-500 mb-1">Sharpe Ratio</span>
+          <span className={`text-lg font-mono font-bold ${typeof sharpe === "string" || parseFloat(sharpe) >= 1 ? "text-primary" : parseFloat(sharpe) >= 0 ? "text-white" : "text-danger"}`}>{sharpe}</span>
+          <span className="text-xs text-gray-600 mt-0.5">ETH return / std dev</span>
+        </div>
+        <div className="rounded-xl border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
+          <span className="text-xs text-gray-500 mb-1">Schools</span>
+          <span className="text-lg font-mono font-bold text-white">{activeSchools.length}</span>
+          <span className="text-xs text-gray-600 mt-0.5">active portfolios</span>
+        </div>
+      </div>
+
+      {/* Charts row 1 */}
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio NAV by School (Ranked)</h2>
-          <NavBarChart schools={schools} />
+          <NavBarChart schools={activeSchools} />
         </div>
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">ETH Return — All Schools</h2>
-          <EthReturnChart schools={schools} />
+          <EthReturnChart schools={activeSchools} />
         </div>
       </div>
 
+      {/* Charts row 2 */}
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
-          <h2 className="text-sm font-semibold text-gray-300 mb-4">Top & Bottom 3 — ETH Return</h2>
-          <TopBottomChart schools={schools} />
+          <h2 className="text-sm font-semibold text-gray-300 mb-4">Top &amp; Bottom 3 — ETH Return</h2>
+          <TopBottomChart schools={activeSchools} />
         </div>
         <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">Deployment % vs. NAV</h2>
-          <DeploymentScatter schools={schools} />
+          <DeploymentScatter schools={activeSchools} />
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+      {/* Leaderboard */}
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-6">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-300">
-            School Leaderboard — All {schools.length}
+            School Leaderboard — All {activeSchools.length}
           </h2>
           <Link
             href="/schools"
@@ -77,7 +138,22 @@ export function DashboardClient({ schools }: { schools: SchoolRow[] }) {
             Schools tab <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
-        <SortableLeaderboard schools={schools} />
+        <SortableLeaderboard schools={activeSchools} />
+      </div>
+
+      {/* Sync footer */}
+      <div className="text-center text-xs text-gray-600 pb-2">
+        Last synced: {syncedAgo < 1 ? "just now" : `${syncedAgo} min ago`}
+        {" · "}
+        <button
+          onClick={async () => {
+            await fetch("/api/revalidate", { method: "POST" });
+            window.location.reload();
+          }}
+          className="text-primary hover:underline"
+        >
+          Refresh
+        </button>
       </div>
     </>
   );
