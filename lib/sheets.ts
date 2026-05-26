@@ -5,20 +5,6 @@ import { slugify } from "@/lib/utils";
 
 const SHEET_ID = "1wA8KoPlhZ1YYv6auM5yYlzjYCBRnG9en9i_qLsrlVZs";
 
-const CHAIN_FALLBACK: Record<string, string> = {
-  ZEC: "Zcash",
-  ETH: "Ethereum",
-  SOL: "Solana",
-  HYPE: "Hyperliquid",
-  LINK: "Ethereum",
-  AAVE: "Ethereum",
-  JUP: "Solana",
-  TAO: "Bittensor",
-  AVAX: "Avalanche",
-  BNB: "BNB Chain",
-  BTC: "Bitcoin",
-  CBBTC: "Base",
-};
 
 const TAB_DISPLAY_NAMES: Record<string, string> = {
   NYU: "NYU",
@@ -249,7 +235,7 @@ function parseHoldings(data: string[][]): Holding[] {
     const validRoi  = roiRaw?.includes("%")  ?? false;
     holdings.push({
       ticker: rawTicker.toUpperCase(),
-      blockchain: CHAIN_FALLBACK[rawTicker.toUpperCase()] || (chainIdx >= 0 ? row[chainIdx]?.trim() : "") || "",
+      blockchain: chainIdx >= 0 ? (row[chainIdx]?.trim() || "") : "",
       tokens: isValue(row[tokensIdx]) ? parseNumber(row[tokensIdx]) : 0,
       entryFdv: fdvIdx >= 0 && isValue(row[fdvIdx]) ? row[fdvIdx]?.trim() || "" : "",
       costBasisEth: costIdx >= 0 && isValue(row[costIdx]) ? parseNumber(row[costIdx]) : 0,
