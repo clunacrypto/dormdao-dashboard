@@ -14,11 +14,11 @@ export function DeploymentScatter({ schools }: { schools: SchoolRow[] }) {
   const light = theme === "light";
   const [hoveredName, setHoveredName] = useState<string | null>(null);
 
-  const tick   = light ? "#6b7280" : "#9ca3af";
+  const tick   = light ? "#374151" : "#9ca3af";
   const grid   = light ? "#e5e7eb" : "#374151";
   const ttBg   = light ? "#ffffff" : "#1f2937";
   const ttBord = light ? "#e5e7eb" : "#374151";
-  const axLbl  = light ? "#9ca3af" : "#6b7280";
+  const axLbl  = light ? "#374151" : "#9ca3af";
 
   const data = schools.map((s) => ({ name: s.name, x: s.pctDeployed, y: s.nav }));
 

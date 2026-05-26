@@ -1,21 +1,67 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KpiCard } from "@/components/ui/Card";
 import { NavBarChart } from "@/components/charts/NavBarChart";
 import { EthReturnChart } from "@/components/charts/EthReturnChart";
 import { TopBottomChart } from "@/components/charts/TopBottomChart";
 import { DeploymentScatter } from "@/components/charts/ScatterChart";
 import { SortableLeaderboard } from "@/components/SortableLeaderboard";
+import { RecentBuysFeed } from "@/components/RecentBuysFeed";
 import { SchoolRow } from "@/lib/types";
 import { formatUSD, formatPct } from "@/lib/utils";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Camera } from "lucide-react";
 
 function stdDev(values: number[]): number {
   if (values.length < 2) return 0;
   const mean = values.reduce((s, v) => s + v, 0) / values.length;
   const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / (values.length - 1);
   return Math.sqrt(variance);
+}
+
+function AdminPanel() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [snapping, setSnapping] = useState(false);
+  const [snapResult, setSnapResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsAdmin(window.location.search.includes("admin=true"));
+  }, []);
+
+  if (!isAdmin) return null;
+
+  async function captureSnapshot() {
+    setSnapping(true);
+    setSnapResult(null);
+    try {
+      const res = await fetch("/api/snapshot", { method: "POST" });
+      const data = await res.json();
+      if (data.error) {
+        setSnapResult(`Error: ${data.error}`);
+      } else {
+        setSnapResult(`Snapshot saved — ${data.snapshotCount} schools, ${data.changesDetected} changes detected`);
+      }
+    } catch {
+      setSnapResult("Network error");
+    } finally {
+      setSnapping(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-xl border border-yellow-900/50 bg-yellow-900/10">
+      <Camera className="w-4 h-4 text-yellow-500 shrink-0" />
+      <span className="text-xs text-yellow-400">Admin</span>
+      <button
+        onClick={captureSnapshot}
+        disabled={snapping}
+        className="px-3 py-1.5 rounded-lg bg-yellow-600/20 border border-yellow-600/40 text-yellow-400 text-xs hover:bg-yellow-600/30 transition-colors disabled:opacity-50"
+      >
+        {snapping ? "Saving…" : "Capture Snapshot"}
+      </button>
+      {snapResult && <span className="text-xs text-yellow-300">{snapResult}</span>}
+    </div>
+  );
 }
 
 export function DashboardClient({
@@ -47,6 +93,8 @@ export function DashboardClient({
 
   return (
     <>
+      <AdminPanel />
+
       {/* Period toggle */}
       {sinceInceptionSchools.length > 0 && (
         <div className="flex gap-1.5 mb-6">
@@ -140,6 +188,9 @@ export function DashboardClient({
         </div>
         <SortableLeaderboard schools={activeSchools} />
       </div>
+
+      {/* Recent Buys */}
+      <RecentBuysFeed schools={schools} />
 
       {/* Sync footer */}
       <div className="text-center text-xs text-gray-600 pb-2">

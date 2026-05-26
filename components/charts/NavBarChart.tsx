@@ -12,7 +12,7 @@ export function NavBarChart({ schools }: { schools: SchoolRow[] }) {
   const { theme } = useTheme();
   const light = theme === "light";
 
-  const tick   = light ? "#6b7280" : "#9ca3af";
+  const tick   = light ? "#374151" : "#9ca3af";
   const ttBg   = light ? "#ffffff" : "#1f2937";
   const ttBord = light ? "#e5e7eb" : "#374151";
   const ttLbl  = light ? "#111827" : "#f3f4f6";
@@ -49,8 +49,21 @@ export function NavBarChart({ schools }: { schools: SchoolRow[] }) {
           <LabelList
             dataKey="nav"
             position="top"
-            formatter={(v: unknown) => formatUSD(Number(v), true)}
-            style={{ fill: "#ffffff", fontSize: 11, fontWeight: 500 }}
+            content={(props: any) => {
+              const { x, y, width, value } = props;
+              return (
+                <text
+                  x={Number(x) + Number(width) / 2}
+                  y={Number(y) - 4}
+                  fill={light ? "#111827" : "#ffffff"}
+                  fontSize={11}
+                  fontWeight={500}
+                  textAnchor="middle"
+                >
+                  {formatUSD(Number(value), true)}
+                </text>
+              );
+            }}
           />
         </Bar>
       </BarChart>

@@ -172,16 +172,23 @@ function parseHoldings(data: string[][]): Holding[] {
 
   const headers = data[colHeaderIdx].map((h) => h?.trim().toLowerCase());
 
-  // Positional defaults confirmed from gviz output: col[1]=ticker, col[3]=tokens, col[5]=pct
+  // Positional defaults confirmed from gviz output.
+  // The CSV has two sections side-by-side:
+  //   Liquid Positions: col[1]=ticker, col[2]=price, col[3]=tokens, col[4]=mktval, col[5]=pct
+  //   Position Statistics: col[7]=date, col[8]=position, col[9]=chain, col[10]=fdv,
+  //                        col[11]=costETH, col[12]=7dETH%, col[13]=7dUSD%,
+  //                        col[14]=roiETH%, col[15]=roiUSD%, col[16]=gainUSD
+  // Only "Position", "Investment Date", "Position", "Blockchain" have header labels.
+  // All other columns are unlabeled, so we use positional defaults.
   let posIdx = 1;
   let tokensIdx = 3;
   let pctIdx = 5;
-  let chainIdx = -1;
-  let fdvIdx = -1;
-  let costIdx = -1;
-  let dateIdx = -1;
-  let gainIdx = -1;
-  let roiIdx = -1;
+  let chainIdx = 9;
+  let fdvIdx = 10;
+  let costIdx = 11;
+  let dateIdx = 7;
+  let gainIdx = 16;
+  let roiIdx = 15;
 
   const foundPos = headers.findIndex((h) => h === "position");
   if (foundPos !== -1) posIdx = foundPos;
@@ -189,13 +196,18 @@ function parseHoldings(data: string[][]): Holding[] {
   if (foundTokens !== -1) tokensIdx = foundTokens;
   const foundPct = headers.findIndex((h) => h.includes("% of sub dao") || h.includes("% of portfolio"));
   if (foundPct !== -1) pctIdx = foundPct;
-  chainIdx = headers.findIndex((h) => h === "blockchain");
-  fdvIdx = headers.findIndex((h) => h.includes("entry fdv"));
-  costIdx = headers.findIndex((h) => h.includes("cost basis (eth)"));
-  dateIdx = headers.findIndex((h) => h.includes("investment date"));
-  // Gain(USD) and ROI(USD)% have no header labels — find by fixed offset from Cost Basis
-  gainIdx = costIdx >= 0 ? costIdx + 5 : -1;
-  roiIdx  = costIdx >= 0 ? costIdx + 3 : -1;
+  const foundChain = headers.findIndex((h) => h === "blockchain");
+  if (foundChain !== -1) chainIdx = foundChain;
+  const foundFdv = headers.findIndex((h) => h.includes("entry fdv"));
+  if (foundFdv !== -1) fdvIdx = foundFdv;
+  const foundCost = headers.findIndex((h) => h.includes("cost basis (eth)") || h.includes("cost basis eth"));
+  if (foundCost !== -1) {
+    costIdx = foundCost;
+    gainIdx = costIdx + 5;
+    roiIdx  = costIdx + 4;
+  }
+  const foundDate = headers.findIndex((h) => h.includes("investment date"));
+  if (foundDate !== -1) dateIdx = foundDate;
 
   const holdings: Holding[] = [];
 

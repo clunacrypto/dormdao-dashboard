@@ -13,6 +13,7 @@ import { SyncFooter } from "@/components/SyncFooter";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { SCHOOL_SOCIALS } from "@/lib/schoolData";
 import { ArrowLeft, Globe, X, Link2, Camera, MessageSquare, Send, Code2 } from "lucide-react";
+import { SchoolHistory } from "@/components/SchoolHistory";
 
 async function getNotes(school: string) {
   try {
@@ -155,6 +156,12 @@ async function SchoolContent({ slug }: { slug: string }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Portfolio History */}
+      <div className="mb-6">
+        <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio History</h2>
+        <SchoolHistory schoolName={school.name} />
       </div>
 
       <SyncFooter fetchedAt={fetchedAt} />

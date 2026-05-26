@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Moon, Sun, BarChart2, BookOpen, GraduationCap, Coins, Info } from "lucide-react";
+import { Moon, Sun, BarChart2, BookOpen, GraduationCap, Coins, Info, Activity } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/", label: "Overview", icon: BarChart2 },
   { href: "/schools", label: "Schools", icon: GraduationCap },
   { href: "/tokens", label: "Tokens", icon: Coins },
+  { href: "/activity", label: "Activity", icon: Activity },
   { href: "/research", label: "Research", icon: BookOpen },
   { href: "/about", label: "About", icon: Info },
 ];

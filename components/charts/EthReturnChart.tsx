@@ -13,7 +13,7 @@ export function EthReturnChart({ schools }: { schools: SchoolRow[] }) {
   const { theme } = useTheme();
   const light = theme === "light";
 
-  const tick   = light ? "#6b7280" : "#9ca3af";
+  const tick   = light ? "#374151" : "#9ca3af";
   const ttBg   = light ? "#ffffff" : "#1f2937";
   const ttBord = light ? "#e5e7eb" : "#374151";
   const ttLbl  = light ? "#111827" : "#f3f4f6";
@@ -59,15 +59,33 @@ export function EthReturnChart({ schools }: { schools: SchoolRow[] }) {
           ))}
           <LabelList
             dataKey="ethReturn"
-            position="top"
             content={(props: any) => {
-              const { x, y, width, value } = props;
+              const { x, y, width, height, value } = props;
               const n = Number(value);
-              // Positive: white on dark chart bg; negative: light-red so it reads as negative
-              const color = n >= 0 ? "#ffffff" : "#fca5a5";
+              if (n < 0) {
+                return (
+                  <text
+                    x={Number(x) + Number(width) / 2}
+                    y={Number(y) + Number(height) - 5}
+                    fill={light ? "#dc2626" : "#ef4444"}
+                    textAnchor="middle"
+                    fontSize={11}
+                    fontWeight={500}
+                  >
+                    {`${n.toFixed(0)}%`}
+                  </text>
+                );
+              }
               return (
-                <text x={Number(x) + Number(width) / 2} y={Number(y) - 4} fill={color} fontSize={11} textAnchor="middle" fontWeight="500">
-                  {`${n >= 0 ? "+" : ""}${n.toFixed(0)}%`}
+                <text
+                  x={Number(x) + Number(width) / 2}
+                  y={Number(y) - 5}
+                  fill={light ? "#111827" : "#ffffff"}
+                  textAnchor="middle"
+                  fontSize={11}
+                  fontWeight={500}
+                >
+                  {`+${n.toFixed(0)}%`}
                 </text>
               );
             }}
