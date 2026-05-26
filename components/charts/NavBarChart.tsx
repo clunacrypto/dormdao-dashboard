@@ -50,7 +50,7 @@ export function NavBarChart({ schools }: { schools: SchoolRow[] }) {
             dataKey="nav"
             position="top"
             formatter={(v: unknown) => formatUSD(Number(v), true)}
-            style={{ fill: "#6ee7b7", fontSize: 9 }}
+            style={{ fill: "#ffffff", fontSize: 11, fontWeight: 500 }}
           />
         </Bar>
       </BarChart>

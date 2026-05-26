@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { formatUSD, formatPct } from "@/lib/utils";
+import { formatUSD, formatPrice, formatPct } from "@/lib/utils";
 import { TOKEN_META } from "@/lib/tokens";
 import { TrendingUp, TrendingDown, Search } from "lucide-react";
 
@@ -102,7 +102,7 @@ export function TokensClient({ initialTokens, initialPrices }: Props) {
                     </div>
                     {price ? (
                       <div className="text-right">
-                        <div className="font-mono text-sm text-white">{formatUSD(price.usd)}</div>
+                        <div className="font-mono text-sm text-white">{formatPrice(price.usd)}</div>
                         <div className={`text-xs font-mono ${isUp ? "text-primary" : "text-danger"}`}>
                           {formatPct(price.usd_24h_change)}
                         </div>
@@ -195,7 +195,7 @@ export function TokensClient({ initialTokens, initialPrices }: Props) {
                 ) : price && price.usd > 0 ? (
                   <>
                     <div className="font-mono text-lg font-semibold text-white">
-                      {formatUSD(price.usd)}
+                      {formatPrice(price.usd)}
                     </div>
                     <div className={`text-xs font-mono ${isUp ? "text-primary" : "text-danger"}`}>
                       {formatPct(price.usd_24h_change)} 24h
@@ -207,7 +207,7 @@ export function TokensClient({ initialTokens, initialPrices }: Props) {
 
                 {exposure > 0 && (
                   <div className="text-xs text-gray-500 mt-1">
-                    {formatUSD(exposure, true)} exposure
+                    {formatUSD(exposure)} exposure
                   </div>
                 )}
 

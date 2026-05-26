@@ -10,7 +10,9 @@ import { HoldingsTableClient } from "@/components/HoldingsTableClient";
 import { PortfolioDonut } from "@/components/charts/PortfolioDonut";
 import { PortfolioInsightsClient } from "@/components/PortfolioInsightsClient";
 import { SyncFooter } from "@/components/SyncFooter";
-import { ArrowLeft } from "lucide-react";
+import { SchoolLogo } from "@/components/SchoolLogo";
+import { SCHOOL_SOCIALS } from "@/lib/schoolData";
+import { ArrowLeft, Globe, X, Link2, Camera, MessageSquare, Send, Code2 } from "lucide-react";
 
 async function getNotes(school: string) {
   try {
@@ -28,6 +30,40 @@ async function getNotes(school: string) {
   }
 }
 
+function SocialLinks({ name }: { name: string }) {
+  const socials = SCHOOL_SOCIALS[name];
+  if (!socials) return null;
+
+  const links: { href: string; icon: React.ReactNode; label: string }[] = [];
+
+  if (socials.website)   links.push({ href: socials.website,   icon: <Globe className="w-3.5 h-3.5" />,         label: "Website" });
+  if (socials.twitter)   links.push({ href: socials.twitter,   icon: <X className="w-3.5 h-3.5" />,             label: "Twitter" });
+  if (socials.linkedin)  links.push({ href: socials.linkedin,  icon: <Link2 className="w-3.5 h-3.5" />,         label: "LinkedIn" });
+  if (socials.instagram) links.push({ href: socials.instagram, icon: <Camera className="w-3.5 h-3.5" />,        label: "Instagram" });
+  if (socials.discord)   links.push({ href: socials.discord,   icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Discord" });
+  if (socials.telegram)  links.push({ href: socials.telegram,  icon: <Send className="w-3.5 h-3.5" />,          label: "Telegram" });
+  if (socials.github)    links.push({ href: socials.github,    icon: <Code2 className="w-3.5 h-3.5" />,         label: "GitHub" });
+
+  if (links.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-6">
+      {links.map(({ href, icon, label }) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-400 border border-gray-700/60 hover:border-gray-500 hover:text-gray-200 px-2.5 py-1.5 rounded-lg transition-colors"
+        >
+          {icon}
+          {label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 async function SchoolContent({ slug }: { slug: string }) {
   const { schools, fetchedAt } = await getSchoolsData();
   const school = schools.find((s) => s.slug === slug) ?? null;
@@ -43,20 +79,24 @@ async function SchoolContent({ slug }: { slug: string }) {
     if (others.length > 0) otherSchools[h.ticker] = others;
   }
 
-
   return (
     <>
       <Link href="/schools" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to Schools
       </Link>
 
-      <div className="mb-8">
-        <div className="text-xs font-mono text-gray-500 mb-1">Rank #{school.rank}</div>
-        <h1 className="text-3xl font-bold text-white">{school.name}</h1>
+      <div className="flex items-center gap-4 mb-6">
+        <SchoolLogo name={school.name} size={48} />
+        <div>
+          <div className="text-xs font-mono text-gray-500 mb-1">Rank #{school.rank}</div>
+          <h1 className="text-3xl font-bold text-white">{school.name}</h1>
+        </div>
       </div>
 
+      <SocialLinks name={school.name} />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="NAV" value={formatUSD(school.nav, true)} />
+        <KpiCard label="NAV" value={formatUSD(school.nav)} />
         <KpiCard
           label="USD Return"
           value={formatPct(school.usdReturn)}
@@ -73,13 +113,10 @@ async function SchoolContent({ slug }: { slug: string }) {
       {/* Portfolio analytics row */}
       {(school.holdings?.length ?? 0) > 0 && (
         <div className="grid lg:grid-cols-2 gap-6 mb-6">
-          {/* Donut chart */}
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
             <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio Concentration</h2>
             <PortfolioDonut holdings={school.holdings ?? []} nav={school.nav} />
           </div>
-
-          {/* Stat cards */}
           <PortfolioInsightsClient holdings={school.holdings ?? []} rank={school.rank} />
         </div>
       )}

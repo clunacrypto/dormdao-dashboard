@@ -28,6 +28,18 @@ export function formatUSD(value: number, compact = false): string {
   }).format(value);
 }
 
+// Dedicated price formatter with fixed decimal places by magnitude
+export function formatPrice(value: number): string {
+  const abs = Math.abs(value);
+  const fractionDigits = abs >= 1000 ? 2 : abs >= 0.01 ? 4 : 6;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value);
+}
+
 export function formatPct(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;

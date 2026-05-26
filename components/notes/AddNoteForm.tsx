@@ -34,6 +34,8 @@ export function AddNoteForm({
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [availableTickers, setAvailableTickers] = useState<string[]>(tickersProp ?? []);
 
   useEffect(() => {
@@ -75,6 +77,8 @@ export function AddNoteForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
+    setSubmitError("");
     if (!valid) return;
     setLoading(true);
     try {
@@ -88,15 +92,19 @@ export function AddNoteForm({
         }),
       });
       if (!res.ok) {
-        const { error } = await res.json();
-        throw new Error(error);
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to post note");
       }
       toast("Note posted successfully!", "success");
       setForm((f) => ({ ...f, content: "", sentiment: "neutral", thesis_type: "", price_target: "", time_horizon: "" }));
       setOpen(false);
+      setSubmitAttempted(false);
+      setSubmitError("");
       onSuccess?.();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to post note", "error");
+      const msg = err instanceof Error ? err.message : "Failed to post note";
+      setSubmitError(msg);
+      toast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -153,7 +161,7 @@ export function AddNoteForm({
             onChange={(e) => setForm((f) => ({ ...f, token_ticker: e.target.value }))}
             className={cn(
               "w-full bg-gray-800 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50",
-              !form.token_ticker ? "border-amber-600/50" : "border-gray-700"
+              submitAttempted && !form.token_ticker ? "border-red-500/70" : !form.token_ticker ? "border-amber-600/50" : "border-gray-700"
             )}
           >
             <option value="">— Select token (required) —</option>
@@ -161,6 +169,9 @@ export function AddNoteForm({
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
+          {submitAttempted && !form.token_ticker && (
+            <p className="text-xs text-red-400 mt-1">Please select a token to continue.</p>
+          )}
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Sentiment *</label>
@@ -235,14 +246,20 @@ export function AddNoteForm({
           rows={4}
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 resize-none"
         />
-        <div
-          className={cn(
-            "text-xs mt-1 text-right",
+        <div className="flex items-start justify-between mt-1">
+          {submitAttempted && charCount < 100 ? (
+            <p className="text-xs text-red-400">At least 100 characters required ({100 - charCount} more needed).</p>
+          ) : <span />}
+          <span className={cn(
+            "text-xs",
             charCount < 100 ? "text-gray-500" : charCount > 2000 ? "text-danger" : "text-gray-400"
-          )}
-        >
-          {charCount}/2000{charCount < 100 && ` (${100 - charCount} more to go)`}
+          )}>
+            {charCount}/2000
+          </span>
         </div>
+        {submitError && (
+          <p className="text-xs text-red-400 mt-1 bg-red-900/20 border border-red-800/40 rounded px-3 py-2">{submitError}</p>
+        )}
       </div>
 
       <div className="flex gap-2 justify-end">
@@ -255,7 +272,7 @@ export function AddNoteForm({
         </button>
         <button
           type="submit"
-          disabled={!valid || loading}
+          disabled={loading}
           className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-40 hover:bg-primary-dark transition-colors"
         >
           {loading ? "Posting…" : "Post Note"}

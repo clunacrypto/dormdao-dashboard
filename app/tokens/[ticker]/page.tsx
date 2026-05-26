@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { formatUSD, formatPct } from "@/lib/utils";
+import { formatUSD, formatPrice, formatPct } from "@/lib/utils";
 import { TOKEN_META } from "@/lib/tokens";
 import { Skeleton } from "@/components/ui/Card";
 import { AddNoteForm } from "@/components/notes/AddNoteForm";
@@ -142,7 +142,7 @@ export default function TokenDetailPage() {
               </>
             ) : price ? (
               <>
-                <div className="text-3xl font-mono font-bold text-white">{formatUSD(price.usd)}</div>
+                <div className="text-3xl font-mono font-bold text-white">{formatPrice(price.usd)}</div>
                 <div className={`flex items-center gap-1 text-sm font-mono mt-1 ${isUp ? "text-primary" : "text-danger"}`}>
                   {isUp ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                   {formatPct(price.usd_24h_change)} (24h)
@@ -168,9 +168,9 @@ export default function TokenDetailPage() {
             <div className="text-sm">
               <div className="text-xs text-gray-500 mb-2">24h Range</div>
               <div className="flex items-center gap-2 font-mono">
-                <span className="text-danger">{coinDetail.low24h ? formatUSD(coinDetail.low24h) : "—"}</span>
+                <span className="text-danger">{coinDetail.low24h ? formatPrice(coinDetail.low24h) : "—"}</span>
                 <span className="text-gray-600">→</span>
-                <span className="text-primary">{coinDetail.high24h ? formatUSD(coinDetail.high24h) : "—"}</span>
+                <span className="text-primary">{coinDetail.high24h ? formatPrice(coinDetail.high24h) : "—"}</span>
               </div>
             </div>
           )}
@@ -215,7 +215,7 @@ export default function TokenDetailPage() {
               <StatItem label="Circulating Supply" value={coinDetail.circulatingSupply ? formatCompact(coinDetail.circulatingSupply) : "—"} />
               <StatItem
                 label="ATH"
-                value={coinDetail.ath ? formatUSD(coinDetail.ath) : "—"}
+                value={coinDetail.ath ? formatPrice(coinDetail.ath) : "—"}
                 sub={coinDetail.athChangePercent ? `${coinDetail.athChangePercent.toFixed(1)}% from ATH` : undefined}
                 subColor={coinDetail.athChangePercent && coinDetail.athChangePercent < 0 ? "text-danger" : "text-primary"}
               />
@@ -264,13 +264,13 @@ export default function TokenDetailPage() {
               <div>
                 <div className="text-xs text-gray-500 mb-1">Total Value</div>
                 <div className="font-mono font-bold text-white">
-                  {totalValueUsd > 0 ? formatUSD(totalValueUsd, true) : "—"}
+                  {totalValueUsd > 0 ? formatUSD(totalValueUsd) : "—"}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1">DAO P&amp;L</div>
                 <div className={`font-mono font-bold ${pnl === null ? "text-gray-500" : pnl >= 0 ? "text-primary" : "text-danger"}`}>
-                  {pnl !== null ? `${pnl >= 0 ? "+" : ""}${formatUSD(pnl, true)}` : "—"}
+                  {pnl !== null ? `${pnl >= 0 ? "+" : ""}${formatUSD(pnl)}` : "—"}
                 </div>
               </div>
             </div>
@@ -328,7 +328,7 @@ export default function TokenDetailPage() {
                     </td>
                     {price && (
                       <td className="px-5 py-3 text-right font-mono text-gray-300">
-                        {pos.tokens > 0 ? formatUSD(pos.tokens * price.usd, true) : "—"}
+                        {pos.tokens > 0 ? formatUSD(pos.tokens * price.usd) : "—"}
                       </td>
                     )}
                     {price && ethPrice > 0 && (() => {
@@ -340,7 +340,7 @@ export default function TokenDetailPage() {
                         <td className="px-5 py-3 text-right font-mono">
                           {pnl !== null ? (
                             <span className={pnl >= 0 ? "text-primary" : "text-danger"}>
-                              {pnl >= 0 ? "+" : ""}{formatUSD(pnl, true)}
+                              {pnl >= 0 ? "+" : ""}{formatUSD(pnl)}
                               {pnlPct !== null && (
                                 <span className="text-xs ml-1 opacity-70">
                                   ({pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(0)}%)
@@ -375,14 +375,14 @@ export default function TokenDetailPage() {
                       <td className="px-5 py-3 text-right font-mono text-gray-400">—</td>
                       {price && (
                         <td className="px-5 py-3 text-right font-mono text-white">
-                          {totalValueUsd > 0 ? formatUSD(totalValueUsd, true) : "—"}
+                          {totalValueUsd > 0 ? formatUSD(totalValueUsd) : "—"}
                         </td>
                       )}
                       {price && ethPrice > 0 && (
                         <td className="px-5 py-3 text-right font-mono">
                           {totalPnl !== null ? (
                             <span className={totalPnl >= 0 ? "text-primary" : "text-danger"}>
-                              {totalPnl >= 0 ? "+" : ""}{formatUSD(totalPnl, true)}
+                              {totalPnl >= 0 ? "+" : ""}{formatUSD(totalPnl)}
                               {totalPnlPct !== null && (
                                 <span className="text-xs ml-1 opacity-70">
                                   ({totalPnlPct >= 0 ? "+" : ""}{totalPnlPct.toFixed(0)}%)

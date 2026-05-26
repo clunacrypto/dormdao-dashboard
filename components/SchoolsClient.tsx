@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { SchoolRow } from "@/lib/types";
 import { formatUSD, formatPct } from "@/lib/utils";
+import { SchoolLogo } from "@/components/SchoolLogo";
 import { Search } from "lucide-react";
 
 type SortKey = "rank" | "nav" | "usdReturn" | "ethReturn";
@@ -50,9 +51,12 @@ export function SchoolsClient({ initialSchools }: { initialSchools: SchoolRow[] 
           <Link key={s.slug} href={`/schools/${s.slug}`}>
             <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 hover:border-primary/40 hover:bg-gray-800/50 transition-all cursor-pointer h-full">
               <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="text-xs font-mono text-gray-500 mb-1">Rank #{s.rank}</div>
-                  <h2 className="text-white font-semibold">{s.name}</h2>
+                <div className="flex items-center gap-3">
+                  <SchoolLogo name={s.name} size={32} />
+                  <div>
+                    <div className="text-xs font-mono text-gray-500 mb-1">Rank #{s.rank}</div>
+                    <h2 className="text-white font-semibold">{s.name}</h2>
+                  </div>
                 </div>
                 <div className={`text-sm font-mono font-bold ${s.ethReturn >= 0 ? "text-primary" : "text-danger"}`}>
                   {formatPct(s.ethReturn)}

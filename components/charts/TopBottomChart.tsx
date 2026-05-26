@@ -65,13 +65,14 @@ export function TopBottomChart({ schools }: { schools: SchoolRow[] }) {
             content={(props: any) => {
               const { x, y, width, height, value } = props;
               const n = Number(value);
-              const color = n >= 0 ? "#6ee7b7" : "#fca5a5";
+              const color = n >= 0 ? "#ffffff" : "#fca5a5";
               return (
                 <text
                   x={Number(x) + Number(width) + 4}
                   y={Number(y) + Number(height) / 2}
                   fill={color}
-                  fontSize={9}
+                  fontSize={11}
+                  fontWeight={500}
                   dominantBaseline="middle"
                 >
                   {`${n >= 0 ? "+" : ""}${n.toFixed(0)}%`}

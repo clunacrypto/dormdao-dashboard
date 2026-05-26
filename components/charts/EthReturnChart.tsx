@@ -63,9 +63,10 @@ export function EthReturnChart({ schools }: { schools: SchoolRow[] }) {
             content={(props: any) => {
               const { x, y, width, value } = props;
               const n = Number(value);
-              const color = n >= 0 ? "#6ee7b7" : "#fca5a5";
+              // Positive: white on dark chart bg; negative: light-red so it reads as negative
+              const color = n >= 0 ? "#ffffff" : "#fca5a5";
               return (
-                <text x={Number(x) + Number(width) / 2} y={Number(y) - 3} fill={color} fontSize={9} textAnchor="middle">
+                <text x={Number(x) + Number(width) / 2} y={Number(y) - 4} fill={color} fontSize={11} textAnchor="middle" fontWeight="500">
                   {`${n >= 0 ? "+" : ""}${n.toFixed(0)}%`}
                 </text>
               );

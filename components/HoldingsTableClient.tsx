@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Holding } from "@/lib/types";
-import { formatUSD } from "@/lib/utils";
+import { formatUSD, formatPrice } from "@/lib/utils";
 import { ExternalLink, Download } from "lucide-react";
 
 function exportCsv(holdings: Holding[], prices: Record<string, { usd: number }>, ethPrice: number, schoolName: string) {
@@ -144,17 +144,17 @@ export function HoldingsTableClient({ holdings, otherSchools, schoolName = "scho
                   {h.costBasisEth > 0 ? `${h.costBasisEth} ETH` : "—"}
                 </td>
                 <td className="px-5 py-3 text-right font-mono text-gray-300">
-                  {loading ? "…" : price ? formatUSD(price.usd) : "—"}
+                  {loading ? "…" : price ? formatPrice(price.usd) : "—"}
                 </td>
                 <td className="px-5 py-3 text-right font-mono text-gray-300">
-                  {loading ? "…" : currentValue !== null ? formatUSD(currentValue, true) : "—"}
+                  {loading ? "…" : currentValue !== null ? formatUSD(currentValue) : "—"}
                 </td>
                 <td className="px-5 py-3 text-right font-mono">
                   {loading ? (
                     <span className="text-gray-500">…</span>
                   ) : pnl !== null ? (
                     <span className={pnl >= 0 ? "text-primary" : "text-danger"}>
-                      {pnl >= 0 ? "+" : ""}{formatUSD(pnl, true)}
+                      {pnl >= 0 ? "+" : ""}{formatUSD(pnl)}
                       {pnlPct !== null && (
                         <span className="text-xs ml-1 opacity-70">
                           ({pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(1)}%)
