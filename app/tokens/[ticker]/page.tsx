@@ -38,6 +38,7 @@ export default function TokenDetailPage() {
   const meta = TOKEN_META[tickerUpper];
 
   const [price, setPrice] = useState<{ usd: number; usd_24h_change: number } | null>(null);
+  const [ethPrice, setEthPrice] = useState(0);
   const [coinDetail, setCoinDetail] = useState<CoinDetail | null>(null);
   const [notes, setNotes] = useState<ResearchNote[]>([]);
   const [schoolPositions, setSchoolPositions] = useState<SchoolPosition[]>([]);
@@ -47,9 +48,13 @@ export default function TokenDetailPage() {
   const [loadingSchools, setLoadingSchools] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/prices?tickers=${tickerUpper}`)
+    // Fetch token price + ETH price together so cost basis can be converted to USD
+    fetch(`/api/prices?tickers=${tickerUpper},ETH`)
       .then((r) => r.json())
-      .then((d) => setPrice(d.prices?.[tickerUpper] ?? null))
+      .then((d) => {
+        setPrice(d.prices?.[tickerUpper] ?? null);
+        setEthPrice(d.prices?.ETH?.usd ?? 0);
+      })
       .finally(() => setLoadingPrice(false));
 
     fetch(`/api/notes?token=${tickerUpper}`)
@@ -189,7 +194,6 @@ export default function TokenDetailPage() {
         const totalCostEth = schoolPositions.reduce((s, p) => s + p.costBasisEth, 0);
         const totalValueUsd = price && totalTokens > 0 ? totalTokens * price.usd : 0;
         const convictionScore = Math.round((schoolPositions.length / 17) * 10);
-        const ethPrice = price?.usd ?? 0;
         const costUsd = totalCostEth > 0 && ethPrice > 0 ? totalCostEth * ethPrice : null;
         const pnl = costUsd !== null && totalValueUsd > 0 ? totalValueUsd - costUsd : null;
         const isProfitable = pnl !== null ? pnl > 0 : null;
@@ -260,6 +264,7 @@ export default function TokenDetailPage() {
                   <th className="text-right px-5 py-3">Cost (ETH)</th>
                   <th className="text-right px-5 py-3">% of Portfolio</th>
                   {price && <th className="text-right px-5 py-3">Value (USD)</th>}
+                  {price && ethPrice > 0 && <th className="text-right px-5 py-3">P&amp;L</th>}
                 </tr>
               </thead>
               <tbody>
@@ -289,12 +294,38 @@ export default function TokenDetailPage() {
                         {pos.tokens > 0 ? formatUSD(pos.tokens * price.usd, true) : "—"}
                       </td>
                     )}
+                    {price && ethPrice > 0 && (() => {
+                      const currentValue = pos.tokens > 0 ? pos.tokens * price.usd : null;
+                      const costUsd = pos.costBasisEth > 0 ? pos.costBasisEth * ethPrice : null;
+                      const pnl = currentValue !== null && costUsd !== null ? currentValue - costUsd : null;
+                      const pnlPct = pnl !== null && costUsd !== null && costUsd > 0 ? (pnl / costUsd) * 100 : null;
+                      return (
+                        <td className="px-5 py-3 text-right font-mono">
+                          {pnl !== null ? (
+                            <span className={pnl >= 0 ? "text-primary" : "text-danger"}>
+                              {pnl >= 0 ? "+" : ""}{formatUSD(pnl, true)}
+                              {pnlPct !== null && (
+                                <span className="text-xs ml-1 opacity-70">
+                                  ({pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(0)}%)
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-gray-600">—</span>
+                          )}
+                        </td>
+                      );
+                    })()}
                   </tr>
                 ))}
                 {schoolPositions.length > 1 && (() => {
                   const totalTokens = schoolPositions.reduce((s, p) => s + p.tokens, 0);
                   const totalCostEth = schoolPositions.reduce((s, p) => s + p.costBasisEth, 0);
                   const totalValueUsd = price && totalTokens > 0 ? totalTokens * price.usd : 0;
+                  const totalCostUsd = totalCostEth > 0 && ethPrice > 0 ? totalCostEth * ethPrice : null;
+                  const totalPnl = totalValueUsd > 0 && totalCostUsd !== null ? totalValueUsd - totalCostUsd : null;
+                  const totalPnlPct = totalPnl !== null && totalCostUsd !== null && totalCostUsd > 0
+                    ? (totalPnl / totalCostUsd) * 100 : null;
                   return (
                     <tr className="bg-gray-800/30 font-semibold">
                       <td className="px-5 py-3 text-xs text-gray-400 uppercase tracking-wide">DormDAO Total</td>
@@ -308,6 +339,22 @@ export default function TokenDetailPage() {
                       {price && (
                         <td className="px-5 py-3 text-right font-mono text-white">
                           {totalValueUsd > 0 ? formatUSD(totalValueUsd, true) : "—"}
+                        </td>
+                      )}
+                      {price && ethPrice > 0 && (
+                        <td className="px-5 py-3 text-right font-mono">
+                          {totalPnl !== null ? (
+                            <span className={totalPnl >= 0 ? "text-primary" : "text-danger"}>
+                              {totalPnl >= 0 ? "+" : ""}{formatUSD(totalPnl, true)}
+                              {totalPnlPct !== null && (
+                                <span className="text-xs ml-1 opacity-70">
+                                  ({totalPnlPct >= 0 ? "+" : ""}{totalPnlPct.toFixed(0)}%)
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-gray-600">—</span>
+                          )}
                         </td>
                       )}
                     </tr>

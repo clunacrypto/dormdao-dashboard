@@ -8,6 +8,7 @@ import { AddNoteForm } from "@/components/notes/AddNoteForm";
 import { NoteCard } from "@/components/notes/NoteCard";
 import { HoldingsTableClient } from "@/components/HoldingsTableClient";
 import { PortfolioDonut } from "@/components/charts/PortfolioDonut";
+import { PortfolioInsightsClient } from "@/components/PortfolioInsightsClient";
 import { SyncFooter } from "@/components/SyncFooter";
 import { ArrowLeft } from "lucide-react";
 
@@ -42,19 +43,6 @@ async function SchoolContent({ slug }: { slug: string }) {
     if (others.length > 0) otherSchools[h.ticker] = others;
   }
 
-  // Analytics: largest position, position ages
-  const holdingsWithPct = (school.holdings ?? []).filter((h) => h.pctOfPortfolio > 0);
-  const largestPosition = holdingsWithPct.sort((a, b) => b.pctOfPortfolio - a.pctOfPortfolio)[0];
-
-  // Position ages
-  const today = new Date();
-  const positionsWithDate = (school.holdings ?? []).filter((h) => h.investmentDate);
-  const avgAgeDays = positionsWithDate.length > 0
-    ? positionsWithDate.reduce((s, h) => {
-        const d = new Date(h.investmentDate);
-        return s + (isNaN(d.getTime()) ? 0 : (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
-      }, 0) / positionsWithDate.length
-    : null;
 
   return (
     <>
@@ -92,37 +80,7 @@ async function SchoolContent({ slug }: { slug: string }) {
           </div>
 
           {/* Stat cards */}
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
-            <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio Insights</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <div className="text-xs text-gray-500 mb-1">Positions</div>
-                <div className="text-xl font-mono font-bold text-white">{school.holdings?.length ?? 0}</div>
-                <div className="text-xs text-gray-600 mt-0.5">active holdings</div>
-              </div>
-              {largestPosition && (
-                <div className="bg-gray-800/50 rounded-lg p-3">
-                  <div className="text-xs text-gray-500 mb-1">Largest Position</div>
-                  <div className="text-lg font-mono font-bold text-white">${largestPosition.ticker}</div>
-                  <div className="text-xs text-gray-600 mt-0.5">{largestPosition.pctOfPortfolio.toFixed(1)}% of portfolio</div>
-                </div>
-              )}
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <div className="text-xs text-gray-500 mb-1">Avg Position Age</div>
-                <div className="text-xl font-mono font-bold text-white">
-                  {avgAgeDays !== null ? `${Math.round(avgAgeDays)}d` : "—"}
-                </div>
-                <div className="text-xs text-gray-600 mt-0.5">
-                  {avgAgeDays !== null ? `~${(avgAgeDays / 30).toFixed(1)} months` : "no date data"}
-                </div>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <div className="text-xs text-gray-500 mb-1">Rank</div>
-                <div className="text-xl font-mono font-bold text-primary">#{school.rank}</div>
-                <div className="text-xs text-gray-600 mt-0.5">by ETH performance</div>
-              </div>
-            </div>
-          </div>
+          <PortfolioInsightsClient holdings={school.holdings ?? []} rank={school.rank} />
         </div>
       )}
 
