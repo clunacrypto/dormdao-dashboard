@@ -65,9 +65,11 @@ export function TopBottomChart({ schools }: { schools: SchoolRow[] }) {
               const { x, y, width, height, value } = props;
               const n = Number(value);
               if (n < 0) {
+                // x is the 0% axis pixel; width is negative (extends left).
+                // Place label just right of the 0% axis line.
                 return (
                   <text
-                    x={Number(x) + Number(width) + 5}
+                    x={Number(x) + 5}
                     y={Number(y) + Number(height) / 2}
                     fill={light ? "#dc2626" : "#ef4444"}
                     textAnchor="start"
