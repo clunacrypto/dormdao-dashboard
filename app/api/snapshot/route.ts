@@ -9,7 +9,13 @@ interface StoredHolding {
   costBasisEth: number;
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  const auth = req.headers.get("authorization");
+  if (!secret || auth !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { schools } = await fetchSheetsData();
     const supabase = createServiceClient();

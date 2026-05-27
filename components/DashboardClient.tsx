@@ -33,8 +33,12 @@ function AdminPanel() {
   async function captureSnapshot() {
     setSnapping(true);
     setSnapResult(null);
+    const secret = new URLSearchParams(window.location.search).get("secret") ?? "";
     try {
-      const res = await fetch("/api/snapshot", { method: "POST" });
+      const res = await fetch("/api/snapshot", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${secret}` },
+      });
       const data = await res.json();
       if (data.error) {
         setSnapResult(`Error: ${data.error}`);
