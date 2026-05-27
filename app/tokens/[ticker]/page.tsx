@@ -55,6 +55,8 @@ interface SchoolPosition {
   tokens: number;
   costBasisEth: number;
   pctOfPortfolio: number;
+  gainUsd?: number;
+  roiUsdPct?: number;
 }
 
 export default function TokenDetailPage() {
@@ -110,6 +112,8 @@ export default function TokenDetailPage() {
               tokens: h.tokens,
               costBasisEth: h.costBasisEth,
               pctOfPortfolio: h.pctOfPortfolio,
+              gainUsd: h.gainUsd,
+              roiUsdPct: h.roiUsdPct,
             });
           }
         }
@@ -301,7 +305,7 @@ export default function TokenDetailPage() {
                   <th className="text-right px-5 py-3">Cost (ETH)</th>
                   <th className="text-right px-5 py-3">% of Portfolio</th>
                   {price && <th className="text-right px-5 py-3">Value (USD)</th>}
-                  {price && ethPrice > 0 && <th className="text-right px-5 py-3">P&amp;L</th>}
+                  {price && <th className="text-right px-5 py-3">P&amp;L</th>}
                 </tr>
               </thead>
               <tbody>
@@ -316,7 +320,7 @@ export default function TokenDetailPage() {
                       </Link>
                     </td>
                     <td className="px-5 py-3 text-right font-mono text-gray-300">
-                      {pos.tokens > 0
+                      {pos.tokens !== 0
                         ? pos.tokens.toLocaleString(undefined, { maximumFractionDigits: 4 })
                         : "—"}
                     </td>
@@ -328,17 +332,20 @@ export default function TokenDetailPage() {
                     </td>
                     {price && (
                       <td className="px-5 py-3 text-right font-mono text-gray-300">
-                        {pos.tokens > 0 ? formatUSD(pos.tokens * price.usd) : "—"}
+                        {pos.tokens !== 0 ? formatUSD(pos.tokens * price.usd) : "—"}
                       </td>
                     )}
-                    {price && ethPrice > 0 && (() => {
-                      const currentValue = pos.tokens > 0 ? pos.tokens * price.usd : null;
-                      const costUsd = pos.costBasisEth > 0 ? pos.costBasisEth * ethPrice : null;
-                      const pnl = currentValue !== null && costUsd !== null ? currentValue - costUsd : null;
-                      const pnlPct = pnl !== null && costUsd !== null && costUsd > 0 ? (pnl / costUsd) * 100 : null;
+                    {price && (() => {
+                      // Prefer sheet's pre-computed gain; fall back to derived from cost basis
+                      const sheetGain = pos.gainUsd;
+                      const computedGain = pos.tokens !== 0 && pos.costBasisEth > 0 && ethPrice > 0
+                        ? pos.tokens * price.usd - pos.costBasisEth * ethPrice
+                        : null;
+                      const pnl = sheetGain !== undefined ? sheetGain : computedGain;
+                      const pnlPct = pos.roiUsdPct !== undefined ? pos.roiUsdPct : null;
                       return (
                         <td className="px-5 py-3 text-right font-mono">
-                          {pnl !== null ? (
+                          {pnl !== null && pnl !== undefined ? (
                             <span className={pnl >= 0 ? "text-primary" : "text-danger"}>
                               {pnl >= 0 ? "+" : ""}{formatUSD(pnl)}
                               {pnlPct !== null && (
@@ -358,16 +365,23 @@ export default function TokenDetailPage() {
                 {schoolPositions.length > 1 && (() => {
                   const totalTokens = schoolPositions.reduce((s, p) => s + p.tokens, 0);
                   const totalCostEth = schoolPositions.reduce((s, p) => s + p.costBasisEth, 0);
-                  const totalValueUsd = price && totalTokens > 0 ? totalTokens * price.usd : 0;
+                  const totalValueUsd = price && totalTokens !== 0 ? totalTokens * price.usd : 0;
+                  // Sum sheet gain if available for any position; else fall back to cost-derived
+                  const hasSheetGain = schoolPositions.some((p) => p.gainUsd !== undefined);
+                  const totalPnl = hasSheetGain
+                    ? schoolPositions.reduce((s, p) => s + (p.gainUsd ?? 0), 0)
+                    : (() => {
+                        const totalCostUsd = totalCostEth > 0 && ethPrice > 0 ? totalCostEth * ethPrice : null;
+                        return totalValueUsd > 0 && totalCostUsd !== null ? totalValueUsd - totalCostUsd : null;
+                      })();
                   const totalCostUsd = totalCostEth > 0 && ethPrice > 0 ? totalCostEth * ethPrice : null;
-                  const totalPnl = totalValueUsd > 0 && totalCostUsd !== null ? totalValueUsd - totalCostUsd : null;
                   const totalPnlPct = totalPnl !== null && totalCostUsd !== null && totalCostUsd > 0
                     ? (totalPnl / totalCostUsd) * 100 : null;
                   return (
                     <tr className="bg-gray-800/30 font-semibold">
                       <td className="px-5 py-3 text-xs text-gray-400 uppercase tracking-wide">DormDAO Total</td>
                       <td className="px-5 py-3 text-right font-mono text-white">
-                        {totalTokens > 0 ? totalTokens.toLocaleString(undefined, { maximumFractionDigits: 4 }) : "—"}
+                        {totalTokens !== 0 ? totalTokens.toLocaleString(undefined, { maximumFractionDigits: 4 }) : "—"}
                       </td>
                       <td className="px-5 py-3 text-right font-mono text-white">
                         {totalCostEth > 0 ? `${totalCostEth.toFixed(4)} ETH` : "—"}
@@ -375,10 +389,10 @@ export default function TokenDetailPage() {
                       <td className="px-5 py-3 text-right font-mono text-gray-400">—</td>
                       {price && (
                         <td className="px-5 py-3 text-right font-mono text-white">
-                          {totalValueUsd > 0 ? formatUSD(totalValueUsd) : "—"}
+                          {totalValueUsd !== 0 ? formatUSD(totalValueUsd) : "—"}
                         </td>
                       )}
-                      {price && ethPrice > 0 && (
+                      {price && (
                         <td className="px-5 py-3 text-right font-mono">
                           {totalPnl !== null ? (
                             <span className={totalPnl >= 0 ? "text-primary" : "text-danger"}>
