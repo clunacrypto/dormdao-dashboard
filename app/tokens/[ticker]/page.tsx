@@ -10,7 +10,7 @@ import { NoteCard } from "@/components/notes/NoteCard";
 import { PriceLineChart } from "@/components/charts/PriceLineChart";
 import { FundDocuments } from "@/components/FundDocuments";
 import { ResearchNote } from "@/lib/types";
-import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Upload } from "lucide-react";
 
 const BASE = "https://classic.artemis.ai/asset/";
 const ARTEMIS_URL: Record<string, string> = {
@@ -60,6 +60,123 @@ interface SchoolPosition {
   roiUsdPct?: number;
 }
 
+function AdminDocUpload({ ticker, onUploaded }: { ticker: string; onUploaded: () => void }) {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    title: "", school: "", document_date: "", document_type: "report",
+  });
+  const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    setIsAdmin(window.location.search.includes("admin=true"));
+  }, []);
+
+  if (!isAdmin) return null;
+
+  async function handleUpload(e: React.FormEvent) {
+    e.preventDefault();
+    if (!file) { setResult("Please select a PDF file."); return; }
+    setUploading(true);
+    setResult(null);
+    const secret = new URLSearchParams(window.location.search).get("secret") ?? "";
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("ticker", ticker);
+    fd.append("title", form.title);
+    if (form.school) fd.append("school", form.school);
+    if (form.document_date) fd.append("document_date", form.document_date);
+    fd.append("document_type", form.document_type);
+    try {
+      const res = await fetch("/api/documents/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${secret}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (data.error) {
+        setResult(`Error: ${data.error}`);
+      } else {
+        setResult("Uploaded successfully!");
+        setForm({ title: "", school: "", document_date: "", document_type: "report" });
+        setFile(null);
+        setOpen(false);
+        onUploaded();
+      }
+    } catch {
+      setResult("Network error");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const inputCls = "w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-gray-500";
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-600/20 border border-yellow-600/40 text-yellow-400 text-xs hover:bg-yellow-600/30 transition-colors"
+      >
+        <Upload className="w-3.5 h-3.5" />
+        {open ? "Cancel Upload" : "Upload Document"}
+      </button>
+      {result && <p className="text-xs text-yellow-300 mt-1">{result}</p>}
+      {open && (
+        <form onSubmit={handleUpload} className="mt-3 p-4 rounded-xl border border-yellow-900/50 bg-yellow-900/10 flex flex-col gap-3">
+          <div className="text-xs font-medium text-yellow-400 mb-1">Upload Fund Document — ${ticker}</div>
+          <input
+            required
+            placeholder="Title (e.g. Hyperliquid $HYPE — Pitch Deck)"
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            className={inputCls}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              placeholder="School (e.g. Oregon)"
+              value={form.school}
+              onChange={(e) => setForm((f) => ({ ...f, school: e.target.value }))}
+              className={inputCls}
+            />
+            <input
+              type="date"
+              value={form.document_date}
+              onChange={(e) => setForm((f) => ({ ...f, document_date: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <select
+            value={form.document_type}
+            onChange={(e) => setForm((f) => ({ ...f, document_type: e.target.value }))}
+            className={inputCls}
+          >
+            <option value="report">Fund Report</option>
+            <option value="pitch_deck">Pitch Deck</option>
+            <option value="other">Other</option>
+          </select>
+          <input
+            required
+            type="file"
+            accept=".pdf,application/pdf"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="text-xs text-gray-400 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-gray-600 file:bg-gray-800 file:text-gray-300 file:text-xs hover:file:border-gray-500 cursor-pointer"
+          />
+          <button
+            type="submit"
+            disabled={uploading}
+            className="px-4 py-2 rounded-lg bg-yellow-600/30 border border-yellow-600/50 text-yellow-300 text-sm font-medium hover:bg-yellow-600/40 transition-colors disabled:opacity-50"
+          >
+            {uploading ? "Uploading…" : "Upload"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export default function TokenDetailPage() {
   const params = useParams();
   const ticker = (params.ticker as string).toLowerCase();
@@ -75,6 +192,7 @@ export default function TokenDetailPage() {
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(true);
   const [loadingSchools, setLoadingSchools] = useState(true);
+  const [docsKey, setDocsKey] = useState(0);
 
   useEffect(() => {
     // Fetch token price + ETH price together so cost basis can be converted to USD
@@ -127,6 +245,7 @@ export default function TokenDetailPage() {
 
   return (
     <div>
+      <AdminDocUpload ticker={tickerUpper} onUploaded={() => setDocsKey((k) => k + 1)} />
       <Link
         href="/tokens"
         className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-6 transition-colors"
@@ -450,7 +569,7 @@ export default function TokenDetailPage() {
       </div>
 
       {/* Fund Documents */}
-      <FundDocuments ticker={tickerUpper} />
+      <FundDocuments ticker={tickerUpper} refreshKey={docsKey} />
     </div>
   );
 }

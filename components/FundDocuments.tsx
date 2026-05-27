@@ -41,17 +41,18 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-export function FundDocuments({ ticker }: { ticker: string }) {
+export function FundDocuments({ ticker, refreshKey = 0 }: { ticker: string; refreshKey?: number }) {
   const [docs, setDocs] = useState<TokenDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     fetch(`/api/documents?ticker=${encodeURIComponent(ticker)}`)
       .then((r) => r.json())
       .then((d) => setDocs(d.documents ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [ticker]);
+  }, [ticker, refreshKey]);
 
   if (loading || docs.length === 0) return null;
 
