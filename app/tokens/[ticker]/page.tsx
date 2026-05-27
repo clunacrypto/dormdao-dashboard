@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/Card";
 import { AddNoteForm } from "@/components/notes/AddNoteForm";
 import { NoteCard } from "@/components/notes/NoteCard";
 import { PriceLineChart } from "@/components/charts/PriceLineChart";
+import { FundDocuments } from "@/components/FundDocuments";
 import { ResearchNote } from "@/lib/types";
 import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 
@@ -447,6 +448,9 @@ export default function TokenDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Fund Documents */}
+      <FundDocuments ticker={tickerUpper} />
     </div>
   );
 }
