@@ -1,46 +1,25 @@
-import { Suspense } from "react";
-import { DashboardClient } from "@/components/DashboardClient";
 import { getSchoolsData } from "@/lib/cache";
-import { Skeleton } from "@/components/ui/Card";
+import { LeaderboardClient } from "@/components/LeaderboardClient";
+import { SyncFooter } from "@/components/SyncFooter";
 
-function DashboardSkeleton() {
+export const revalidate = 300;
+
+export default async function LeaderboardPage() {
+  const { schools, sinceInceptionSchools, schools2425, schools2324, fetchedAt } = await getSchoolsData();
+
   return (
-    <>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
-            <Skeleton className="h-3 w-24 mb-3" />
-            <Skeleton className="h-8 w-32" />
-          </div>
-        ))}
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-white">Leaderboard</h1>
+        <p className="text-gray-400 mt-1">University DAO rankings across all seasons.</p>
       </div>
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        {[...Array(2)].map((_, i) => (
-          <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
-            <Skeleton className="h-3 w-40 mb-4" />
-            <Skeleton className="h-64 w-full" />
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-async function Dashboard() {
-  const { schools, sinceInceptionSchools, fetchedAt } = await getSchoolsData();
-  return <DashboardClient schools={schools} sinceInceptionSchools={sinceInceptionSchools} fetchedAt={fetchedAt} />;
-}
-
-export default function HomePage() {
-  return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">DormDAO Portfolio Dashboard</h1>
-        <p className="text-gray-400 mt-1">Real-time crypto portfolio tracking for 17 university investment DAOs</p>
-      </div>
-      <Suspense fallback={<DashboardSkeleton />}>
-        <Dashboard />
-      </Suspense>
+      <LeaderboardClient
+        schools={schools}
+        sinceInceptionSchools={sinceInceptionSchools}
+        schools2425={schools2425}
+        schools2324={schools2324}
+      />
+      <SyncFooter fetchedAt={fetchedAt} />
     </div>
   );
 }

@@ -1,0 +1,187 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { SchoolRow } from "@/lib/types";
+import { SchoolLogo } from "@/components/SchoolLogo";
+import { formatUSD, formatPct, cn } from "@/lib/utils";
+import { TrendingUp, TrendingDown } from "lucide-react";
+
+type SortKey = "rank" | "nav" | "usdReturn" | "ethReturn" | "pctDeployed";
+
+const YEARS = [
+  { key: "2025-2026", label: "2025–2026" },
+  { key: "2024-2025", label: "2024–2025" },
+  { key: "2023-2024", label: "2023–2024" },
+  { key: "inception", label: "Since Inception" },
+] as const;
+
+type YearKey = (typeof YEARS)[number]["key"];
+
+function RankBadge({ rank }: { rank: number }) {
+  const base = "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0";
+  if (rank === 1) return <div className={cn(base, "bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/40")}>{rank}</div>;
+  if (rank === 2) return <div className={cn(base, "bg-gray-400/20 text-gray-300 ring-1 ring-gray-400/40")}>{rank}</div>;
+  if (rank === 3) return <div className={cn(base, "bg-orange-600/20 text-orange-400 ring-1 ring-orange-500/40")}>{rank}</div>;
+  return <div className={cn(base, "bg-gray-800 text-gray-500 text-xs")}>{rank}</div>;
+}
+
+function ReturnCell({ value }: { value: number }) {
+  const up = value >= 0;
+  return (
+    <div className={cn("flex items-center justify-end gap-1 font-mono", up ? "text-primary" : "text-danger")}>
+      {up ? <TrendingUp className="w-3 h-3 shrink-0" /> : <TrendingDown className="w-3 h-3 shrink-0" />}
+      {formatPct(value)}
+    </div>
+  );
+}
+
+function LeaderboardTable({ schools, sortKey, setSortKey, asc, setAsc }: {
+  schools: SchoolRow[];
+  sortKey: SortKey;
+  setSortKey: (k: SortKey) => void;
+  asc: boolean;
+  setAsc: (v: boolean) => void;
+}) {
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setAsc(!asc);
+    else { setSortKey(key); setAsc(key === "rank"); }
+  }
+
+  const sorted = [...schools].sort((a, b) => {
+    const mult = asc ? 1 : -1;
+    if (sortKey === "rank") return (a.rank - b.rank) * mult;
+    return ((a[sortKey] as number) - (b[sortKey] as number)) * mult;
+  });
+
+  const thCls = (key: SortKey) => cn(
+    "px-5 py-3 text-right cursor-pointer select-none hover:text-gray-200 transition-colors",
+    sortKey === key ? "text-primary" : "text-gray-500"
+  );
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-800 text-xs">
+            <th className="text-left px-5 py-3 text-gray-500 w-16">Rank</th>
+            <th className="text-left px-5 py-3 text-gray-500">School</th>
+            <th className={thCls("nav")} onClick={() => toggleSort("nav")}>NAV {sortKey === "nav" ? (asc ? "↑" : "↓") : ""}</th>
+            <th className={thCls("usdReturn")} onClick={() => toggleSort("usdReturn")}>USD Return {sortKey === "usdReturn" ? (asc ? "↑" : "↓") : ""}</th>
+            <th className={thCls("ethReturn")} onClick={() => toggleSort("ethReturn")}>ETH Return {sortKey === "ethReturn" ? (asc ? "↑" : "↓") : ""}</th>
+            <th className={thCls("pctDeployed")} onClick={() => toggleSort("pctDeployed")}>% Deployed {sortKey === "pctDeployed" ? (asc ? "↑" : "↓") : ""}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((s, i) => {
+            const displayRank = sortKey === "rank" ? s.rank : i + 1;
+            return (
+              <tr key={s.slug} className={cn(
+                "border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors",
+                s.rank === 1 && sortKey === "rank" ? "bg-yellow-500/5" : ""
+              )}>
+                <td className="px-5 py-3">
+                  <RankBadge rank={displayRank} />
+                </td>
+                <td className="px-5 py-3">
+                  <Link href={`/schools/${s.slug}`} className="flex items-center gap-3 hover:text-primary transition-colors group">
+                    <SchoolLogo name={s.name} size={28} />
+                    <span className="font-semibold text-white group-hover:text-primary">{s.name}</span>
+                  </Link>
+                </td>
+                <td className="px-5 py-3 text-right font-mono text-gray-200">{formatUSD(s.nav, true)}</td>
+                <td className="px-5 py-3 text-right"><ReturnCell value={s.usdReturn} /></td>
+                <td className="px-5 py-3 text-right"><ReturnCell value={s.ethReturn} /></td>
+                <td className="px-5 py-3 text-right font-mono text-gray-400">{formatPct(s.pctDeployed)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function LeaderboardClient({
+  schools,
+  sinceInceptionSchools,
+  schools2425,
+  schools2324,
+}: {
+  schools: SchoolRow[];
+  sinceInceptionSchools: SchoolRow[];
+  schools2425: SchoolRow[];
+  schools2324: SchoolRow[];
+}) {
+  const [year, setYear] = useState<YearKey>("2025-2026");
+  const [sortKey, setSortKey] = useState<SortKey>("rank");
+  const [asc, setAsc] = useState(true);
+
+  const activeSchools =
+    year === "inception" ? (sinceInceptionSchools.length > 0 ? sinceInceptionSchools : schools)
+    : year === "2025-2026" ? schools
+    : year === "2024-2025" ? (schools2425.length > 0 ? schools2425 : null)
+    : year === "2023-2024" ? (schools2324.length > 0 ? schools2324 : null)
+    : null;
+
+  const totalNAV = schools.reduce((s, x) => s + x.nav, 0);
+  const schoolCount = schools.length;
+
+  return (
+    <div>
+      {/* Summary strip */}
+      <div className="flex items-center gap-6 mb-8 px-1">
+        <div>
+          <div className="text-xs text-gray-500 mb-0.5">Total DAO NAV</div>
+          <div className="text-2xl font-bold font-mono text-white">{formatUSD(totalNAV, true)}</div>
+        </div>
+        <div className="w-px h-10 bg-gray-800" />
+        <div>
+          <div className="text-xs text-gray-500 mb-0.5">Active Schools</div>
+          <div className="text-2xl font-bold font-mono text-white">{schoolCount}</div>
+        </div>
+        <div className="w-px h-10 bg-gray-800" />
+        <div>
+          <div className="text-xs text-gray-500 mb-0.5">Win Rate (ETH)</div>
+          <div className="text-2xl font-bold font-mono text-white">
+            {schoolCount > 0 ? Math.round((schools.filter(s => s.ethReturn > 0).length / schoolCount) * 100) : 0}%
+          </div>
+        </div>
+      </div>
+
+      {/* Year tabs */}
+      <div className="flex gap-1.5 mb-0 border-b border-gray-800">
+        {YEARS.map((y) => (
+          <button
+            key={y.key}
+            onClick={() => { setYear(y.key); setSortKey("rank"); setAsc(true); }}
+            className={cn(
+              "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+              year === y.key
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-400 hover:text-white"
+            )}
+          >
+            {y.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div className="rounded-b-xl border border-t-0 border-gray-800 bg-gray-900/50 overflow-hidden">
+        {activeSchools !== null ? (
+          <LeaderboardTable
+            schools={activeSchools}
+            sortKey={sortKey}
+            setSortKey={setSortKey}
+            asc={asc}
+            setAsc={setAsc}
+          />
+        ) : (
+          <div className="py-16 text-center text-gray-500 text-sm">
+            Historical data for {YEARS.find(y => y.key === year)?.label} coming soon.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

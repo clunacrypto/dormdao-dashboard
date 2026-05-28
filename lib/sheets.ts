@@ -139,6 +139,17 @@ function parseSinceInception(data: string[][]): LeaderboardEntry[] {
   return parseLeaderboardSection(data, "Since Inception");
 }
 
+function parseHistoricalLeaderboard(data: string[][]): LeaderboardEntry[] {
+  // Historical tabs use "Member School Leaderboard" without a year suffix,
+  // or fall back to the first leaderboard-like section found.
+  const withYear = parseLeaderboardSection(data, "Member School Leaderboard (2024-2025)");
+  if (withYear.length > 0) return withYear;
+  const withYear2 = parseLeaderboardSection(data, "Member School Leaderboard (2023-2024)");
+  if (withYear2.length > 0) return withYear2;
+  // Fallback: first leaderboard section regardless of name
+  return parseLeaderboardSection(data, "Member School Leaderboard");
+}
+
 function parseHoldings(data: string[][]): Holding[] {
   let colHeaderIdx = -1;
 
@@ -252,15 +263,21 @@ function parseHoldings(data: string[][]): Holding[] {
 export async function fetchSheetsData(): Promise<{
   schools: SchoolRowWithHoldings[];
   sinceInceptionSchools: SchoolRow[];
+  schools2425: SchoolRow[];
+  schools2324: SchoolRow[];
   fetchedAt: string;
 }> {
-  // 1. Fetch leaderboard via gviz
-  const leaderboardData = await fetchGvizCsv("LEADERBOARD");
+  // 1. Fetch leaderboard tabs in parallel
+  const [leaderboardData, data2425, data2324] = await Promise.all([
+    fetchGvizCsv("LEADERBOARD"),
+    fetchGvizCsv("'24-'25 Standings"),
+    fetchGvizCsv("'23-'24 Standings"),
+  ]);
   const leaderboardEntries = parseLeaderboard(leaderboardData);
   const sinceInceptionEntries = parseSinceInception(leaderboardData);
 
   if (leaderboardEntries.length === 0) {
-    return { schools: [], sinceInceptionSchools: [], fetchedAt: new Date().toISOString() };
+    return { schools: [], sinceInceptionSchools: [], schools2425: [], schools2324: [], fetchedAt: new Date().toISOString() };
   }
 
   // 2. Fetch holdings for each school in parallel
@@ -307,5 +324,27 @@ export async function fetchSheetsData(): Promise<{
     };
   }).sort((a, b) => a.rank - b.rank);
 
-  return { schools, sinceInceptionSchools, fetchedAt: new Date().toISOString() };
+  // 5. Parse historical year leaderboards
+  function buildHistoricalRows(data: string[][]): SchoolRow[] {
+    const entries = parseHistoricalLeaderboard(data);
+    return entries.map((e) => {
+      const displayName = tabToDisplayName(e.name);
+      const existing = nameToDisplay.get(displayName.toLowerCase());
+      return {
+        rank: e.rank,
+        name: displayName,
+        slug: existing?.slug ?? slugify(displayName),
+        nav: e.nav,
+        usdReturn: e.usdReturn,
+        ethReturn: e.ethReturn,
+        avgEntryFdv: e.avgEntryFdv,
+        pctDeployed: e.pctDeployed,
+      };
+    }).sort((a, b) => a.rank - b.rank);
+  }
+
+  const schools2425 = buildHistoricalRows(data2425);
+  const schools2324 = buildHistoricalRows(data2324);
+
+  return { schools, sinceInceptionSchools, schools2425, schools2324, fetchedAt: new Date().toISOString() };
 }

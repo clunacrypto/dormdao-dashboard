@@ -8,6 +8,8 @@ export type { SchoolRowWithHoldings } from "./sheets";
 export interface SchoolsCache {
   schools: SchoolRowWithHoldings[];
   sinceInceptionSchools: SchoolRow[];
+  schools2425: SchoolRow[];
+  schools2324: SchoolRow[];
   fetchedAt: string;
   totalNAV: number;
   avgUsdReturn: number;
@@ -23,7 +25,7 @@ export interface PricesCache {
 
 export const getSchoolsData = unstable_cache(
   async (): Promise<SchoolsCache> => {
-    const { schools, sinceInceptionSchools, fetchedAt } = await fetchSheetsData();
+    const { schools, sinceInceptionSchools, schools2425, schools2324, fetchedAt } = await fetchSheetsData();
     const len = schools.length || 1;
 
     const totalNAV = schools.reduce((s, x) => s + x.nav, 0);
@@ -39,7 +41,7 @@ export const getSchoolsData = unstable_cache(
       }
     }
 
-    return { schools, sinceInceptionSchools, fetchedAt, totalNAV, avgUsdReturn, avgEthReturn, avgDeployed, tokenToSchools };
+    return { schools, sinceInceptionSchools, schools2425, schools2324, fetchedAt, totalNAV, avgUsdReturn, avgEthReturn, avgDeployed, tokenToSchools };
   },
   ["schools-data-v4"],
   { revalidate: 300 }
