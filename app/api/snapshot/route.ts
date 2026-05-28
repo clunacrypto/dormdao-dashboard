@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .single();
 
-    if (recent) {
+    const force = new URL(req.url).searchParams.get("force") === "true";
+    if (!force && recent) {
       const ageMs = Date.now() - new Date(recent.captured_at).getTime();
       if (ageMs < 6 * 60 * 60 * 1000) {
         return NextResponse.json({
