@@ -11,6 +11,7 @@ import { PriceLineChart } from "@/components/charts/PriceLineChart";
 import { FundDocuments } from "@/components/FundDocuments";
 import { ResearchNote } from "@/lib/types";
 import { ArrowLeft, TrendingUp, TrendingDown, Upload } from "lucide-react";
+import { ADMIN_SECRET } from "@/lib/admin";
 
 const BASE = "https://classic.artemis.ai/asset/";
 const ARTEMIS_URL: Record<string, string> = {
@@ -71,7 +72,7 @@ function AdminDocUpload({ ticker, onUploaded }: { ticker: string; onUploaded: ()
   const [file, setFile] = useState<File | null>(null);
 
   useEffect(() => {
-    setIsAdmin(window.location.search.includes("admin=true"));
+    setIsAdmin(new URLSearchParams(window.location.search).has("admin"));
   }, []);
 
   if (!isAdmin) return null;
@@ -81,7 +82,6 @@ function AdminDocUpload({ ticker, onUploaded }: { ticker: string; onUploaded: ()
     if (!file) { setResult("Please select a PDF file."); return; }
     setUploading(true);
     setResult(null);
-    const secret = new URLSearchParams(window.location.search).get("secret") ?? "";
     const fd = new FormData();
     fd.append("file", file);
     fd.append("ticker", ticker);
@@ -92,7 +92,7 @@ function AdminDocUpload({ ticker, onUploaded }: { ticker: string; onUploaded: ()
     try {
       const res = await fetch("/api/documents/upload", {
         method: "POST",
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
         body: fd,
       });
       const data = await res.json();
@@ -196,8 +196,7 @@ export default function TokenDetailPage() {
   const [adminSecret, setAdminSecret] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("admin") === "true") setAdminSecret(params.get("secret") ?? "");
+    if (new URLSearchParams(window.location.search).has("admin")) setAdminSecret(ADMIN_SECRET);
   }, []);
 
   useEffect(() => {

@@ -9,6 +9,7 @@ import { SortableLeaderboard } from "@/components/SortableLeaderboard";
 import { RecentBuysFeed } from "@/components/RecentBuysFeed";
 import { EthHoldingsTable } from "@/components/EthHoldingsTable";
 import { SchoolRow } from "@/lib/types";
+import { ADMIN_SECRET } from "@/lib/admin";
 import { formatUSD, formatPct } from "@/lib/utils";
 import Link from "next/link";
 import { ArrowRight, Camera } from "lucide-react";
@@ -26,7 +27,7 @@ function AdminPanel() {
   const [snapResult, setSnapResult] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsAdmin(window.location.search.includes("admin=true"));
+    setIsAdmin(new URLSearchParams(window.location.search).has("admin"));
   }, []);
 
   if (!isAdmin) return null;
@@ -34,11 +35,10 @@ function AdminPanel() {
   async function captureSnapshot() {
     setSnapping(true);
     setSnapResult(null);
-    const secret = new URLSearchParams(window.location.search).get("secret") ?? "";
     try {
       const res = await fetch("/api/snapshot", {
         method: "POST",
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: { Authorization: `Bearer ${ADMIN_SECRET}` },
       });
       const data = await res.json();
       if (data.error) {

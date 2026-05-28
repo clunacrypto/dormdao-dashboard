@@ -6,6 +6,7 @@ import { AddNoteForm } from "@/components/notes/AddNoteForm";
 import { Skeleton } from "@/components/ui/Card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ADMIN_SECRET } from "@/lib/admin";
 
 const SENTIMENTS: Array<{ label: string; value: string }> = [
   { label: "All", value: "" },
@@ -38,8 +39,7 @@ export function ResearchClient({ initialTickers }: { initialTickers: string[] })
   const [adminSecret, setAdminSecret] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("admin") === "true") setAdminSecret(params.get("secret") ?? "");
+    if (new URLSearchParams(window.location.search).has("admin")) setAdminSecret(ADMIN_SECRET);
   }, []);
 
   const fetchNotes = useCallback(async () => {

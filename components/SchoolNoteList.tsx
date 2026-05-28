@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { ResearchNote } from "@/lib/types";
 import { NoteCard } from "@/components/notes/NoteCard";
+import { ADMIN_SECRET } from "@/lib/admin";
 
 export function SchoolNoteList({
   initialNotes,
@@ -14,8 +15,7 @@ export function SchoolNoteList({
   const [adminSecret, setAdminSecret] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("admin") === "true") setAdminSecret(params.get("secret") ?? "");
+    if (new URLSearchParams(window.location.search).has("admin")) setAdminSecret(ADMIN_SECRET);
   }, []);
 
   if (notes.length === 0) {
