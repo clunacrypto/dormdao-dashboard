@@ -1,10 +1,11 @@
 import { getSchoolsData } from "@/lib/cache";
 import { ActivityTabs } from "@/components/ActivityTabs";
+import { SyncFooter } from "@/components/SyncFooter";
 
 export const revalidate = 300;
 
 export default async function ActivityPage() {
-  const { schools } = await getSchoolsData();
+  const { schools, fetchedAt } = await getSchoolsData();
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -13,6 +14,7 @@ export default async function ActivityPage() {
         <p className="text-gray-400 mt-1">All position entries and trims across 17 university DAOs.</p>
       </div>
       <ActivityTabs schools={schools} />
+      <SyncFooter fetchedAt={fetchedAt} />
     </div>
   );
 }
