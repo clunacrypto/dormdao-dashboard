@@ -464,7 +464,7 @@ export default function TokenDetailPage() {
                     <td className="px-5 py-3 text-right font-mono text-gray-300">
                       {pos.tokens !== 0
                         ? pos.tokens.toLocaleString(undefined, { maximumFractionDigits: 4 })
-                        : "—"}
+                        : "0.00"}
                     </td>
                     <td className="px-5 py-3 text-right font-mono text-gray-300">
                       {pos.costBasisEth > 0 ? `${pos.costBasisEth} ETH` : "—"}
@@ -474,7 +474,7 @@ export default function TokenDetailPage() {
                     </td>
                     {price && (
                       <td className="px-5 py-3 text-right font-mono text-gray-300">
-                        {pos.tokens !== 0 ? formatUSD(pos.tokens * price.usd) : "—"}
+                        {pos.tokens !== 0 ? formatUSD(pos.tokens * price.usd) : formatUSD(0)}
                       </td>
                     )}
                     {price && (() => {
