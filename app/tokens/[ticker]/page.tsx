@@ -240,10 +240,8 @@ export default function TokenDetailPage() {
           const gainUsd = hasGain
             ? matches.reduce((s: number, h: { gainUsd?: number }) => s + (h.gainUsd ?? 0), 0)
             : undefined;
-          const hasRoi = matches.some((h: { roiUsdPct?: number }) => h.roiUsdPct !== undefined);
-          const roiUsdPct = hasRoi && costBasisEth > 0 && gainUsd !== undefined
-            ? (gainUsd / (costBasisEth * 1)) * 100
-            : matches[0].roiUsdPct;
+          // ROI % only meaningful for a single position; hide for aggregated multiple positions
+          const roiUsdPct = matches.length === 1 ? matches[0].roiUsdPct : undefined;
           positions.push({
             school: school.name,
             slug: school.slug,
@@ -373,8 +371,14 @@ export default function TokenDetailPage() {
         const totalCostEth = schoolPositions.reduce((s, p) => s + p.costBasisEth, 0);
         const totalValueUsd = price && totalTokens > 0 ? totalTokens * price.usd : 0;
         const convictionScore = Math.round((schoolPositions.length / 17) * 10);
-        const costUsd = totalCostEth > 0 && ethPrice > 0 ? totalCostEth * ethPrice : null;
-        const pnl = costUsd !== null && totalValueUsd > 0 ? totalValueUsd - costUsd : null;
+        // Use sheet gainUsd sum when available (same method as table total row)
+        const hasSheetGain = schoolPositions.some((p) => p.gainUsd !== undefined);
+        const pnl = hasSheetGain
+          ? schoolPositions.reduce((s, p) => s + (p.gainUsd ?? 0), 0)
+          : (() => {
+              const costUsd = totalCostEth > 0 && ethPrice > 0 ? totalCostEth * ethPrice : null;
+              return costUsd !== null && totalValueUsd > 0 ? totalValueUsd - costUsd : null;
+            })();
         const isProfitable = pnl !== null ? pnl > 0 : null;
 
         return (
