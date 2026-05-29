@@ -9,6 +9,7 @@ const SHEET_ID = "1wA8KoPlhZ1YYv6auM5yYlzjYCBRnG9en9i_qLsrlVZs";
 const TAB_DISPLAY_NAMES: Record<string, string> = {
   NYU: "NYU",
   USC: "USC",
+  UVA: "UVA",
   "ST ANDREWS": "St. Andrews",
   "BOSTON COLLEGE": "Boston College",
 };
