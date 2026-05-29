@@ -12,7 +12,6 @@ const YEARS = [
   { key: "2025-2026", label: "2025–2026" },
   { key: "2024-2025", label: "2024–2025" },
   { key: "2023-2024", label: "2023–2024" },
-  { key: "inception", label: "Since Inception" },
 ] as const;
 
 type YearKey = (typeof YEARS)[number]["key"];
@@ -117,8 +116,7 @@ export function LeaderboardClient({
   const [asc, setAsc] = useState(true);
 
   const activeSchools =
-    year === "inception" ? (sinceInceptionSchools.length > 0 ? sinceInceptionSchools : schools)
-    : year === "2025-2026" ? schools
+    year === "2025-2026" ? schools
     : year === "2024-2025" ? (schools2425.length > 0 ? schools2425 : null)
     : year === "2023-2024" ? (schools2324.length > 0 ? schools2324 : null)
     : null;
