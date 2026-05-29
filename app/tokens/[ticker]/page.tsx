@@ -270,7 +270,7 @@ export default function TokenDetailPage() {
       </Link>
 
       {/* Header */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-6 mb-6">
+      <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-start gap-6">
           <div className="flex-1">
             <div className="text-sm text-gray-400 mb-1">{meta?.name ?? tickerUpper}</div>
@@ -326,7 +326,7 @@ export default function TokenDetailPage() {
 
       {/* Market stats */}
       {meta?.geckoId && (
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 mb-6">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-300">Market Stats</h2>
             <a
@@ -382,7 +382,7 @@ export default function TokenDetailPage() {
         const isProfitable = pnl !== null ? pnl > 0 : null;
 
         return (
-          <div className={`rounded-xl border p-5 mb-6 ${isProfitable === true ? "border-primary/30 bg-primary/5" : isProfitable === false ? "border-danger/30 bg-danger/5" : "border-gray-800 bg-gray-900/50"}`}>
+          <div className={`rounded-lg border p-5 mb-6 ${isProfitable === true ? "border-primary/30 bg-primary/5" : isProfitable === false ? "border-danger/30 bg-danger/5" : "border-gray-800 bg-gray-900/30"}`}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-300">Aggregate DormDAO Position</h2>
               <div className="flex items-center gap-2">
@@ -425,7 +425,7 @@ export default function TokenDetailPage() {
       })()}
 
       {/* Held by DormDAO */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-6">
+      <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-300">
             Held by DormDAO ({loadingSchools ? "…" : schoolPositions.length} school{schoolPositions.length !== 1 ? "s" : ""})
@@ -573,7 +573,7 @@ export default function TokenDetailPage() {
         <div className="flex flex-col gap-3 mt-4">
           {loadingNotes
             ? [...Array(3)].map((_, i) => (
-                <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+                <div key={i} className="rounded-lg border border-gray-800 bg-gray-900/30 p-4">
                   <Skeleton className="h-4 w-24 mb-3" />
                   <Skeleton className="h-12 w-full mb-3" />
                   <Skeleton className="h-3 w-32" />

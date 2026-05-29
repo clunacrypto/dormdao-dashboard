@@ -101,7 +101,7 @@ export function NoteCard({ note, currentUserId, adminSecret, onDelete, onUpvote 
   const canDelete = adminSecret || (currentUserId && note.user_id === currentUserId);
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 flex flex-col gap-3">
+    <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <SentimentBadge sentiment={note.sentiment} />

@@ -49,7 +49,7 @@ export function SchoolsClient({ initialSchools }: { initialSchools: SchoolRow[] 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((s) => (
           <Link key={s.slug} href={`/schools/${s.slug}`}>
-            <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 hover:border-primary/40 hover:bg-gray-800/50 transition-all cursor-pointer h-full">
+            <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5 hover:border-primary/40 hover:bg-gray-800/30 transition-all cursor-pointer h-full">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <SchoolLogo name={s.name} size={32} />

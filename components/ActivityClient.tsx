@@ -138,7 +138,7 @@ export function ActivityClient({ schools }: { schools: SchoolRow[] }) {
       <div className="text-xs text-gray-500 mb-3">{filtered.length} positions</div>
 
       {/* Table */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+      <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

@@ -169,7 +169,7 @@ export function TokensClient({ initialTokens, initialPrices }: Props) {
 
           return (
             <Link key={token.ticker} href={`/tokens/${token.ticker.toLowerCase()}`}>
-              <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 hover:border-primary/40 hover:bg-gray-800/50 transition-all cursor-pointer h-full flex flex-col">
+              <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-4 hover:border-primary/40 hover:bg-gray-800/30 transition-all cursor-pointer h-full flex flex-col">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <div className="text-xs text-gray-500 mb-0.5">{meta?.name ?? token.ticker}</div>

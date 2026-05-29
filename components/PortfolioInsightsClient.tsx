@@ -86,7 +86,7 @@ export function PortfolioInsightsClient({ holdings, rank }: Props) {
     : null;
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+    <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
       <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio Insights</h2>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-gray-800/50 rounded-lg p-3">

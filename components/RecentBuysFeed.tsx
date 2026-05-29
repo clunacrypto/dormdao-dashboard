@@ -82,7 +82,7 @@ export function RecentBuysFeed({ schools }: { schools: SchoolRow[] }) {
   if (recent.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-6">
+    <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden mb-6">
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
         <h2 className="text-sm font-semibold text-gray-300">Recent Buys</h2>
         <Link href="/activity" className="flex items-center gap-1 text-xs text-primary hover:underline">

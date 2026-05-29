@@ -65,8 +65,8 @@ export function ResearchClient({ initialTickers, hideHeader }: { initialTickers:
   return (
     <div>
       {!hideHeader && (
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Community Research</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-white">Community Research</h1>
         </div>
       )}
       <p className="text-gray-400 mb-4 text-sm">
@@ -127,7 +127,7 @@ export function ResearchClient({ initialTickers, hideHeader }: { initialTickers:
       <div className="flex flex-col gap-3">
         {loading
           ? [...Array(5)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+              <div key={i} className="rounded-lg border border-gray-800 bg-gray-900/30 p-4">
                 <Skeleton className="h-4 w-32 mb-3" />
                 <Skeleton className="h-16 w-full mb-3" />
                 <Skeleton className="h-3 w-40" />

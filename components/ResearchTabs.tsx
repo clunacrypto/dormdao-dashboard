@@ -16,21 +16,21 @@ export function ResearchTabs({ initialTickers }: { initialTickers: string[] }) {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Research</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-white">Research</h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1.5 mb-6 border-b border-gray-800">
+      <div className="flex gap-0 mb-0 border-b border-gray-800">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+              "px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors",
               tab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-gray-400 hover:text-white"
+                ? "border-primary text-white font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-300 font-normal"
             )}
           >
             {t.label}

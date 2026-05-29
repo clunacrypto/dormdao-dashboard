@@ -23,10 +23,10 @@ export function ActivityTabs({ schools }: { schools: SchoolRow[] }) {
             key={t.key}
             onClick={() => setTab(t.key)}
             className={cn(
-              "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+              "px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors",
               tab === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-gray-400 hover:text-white"
+                ? "border-primary text-white font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-300 font-normal"
             )}
           >
             {t.label}

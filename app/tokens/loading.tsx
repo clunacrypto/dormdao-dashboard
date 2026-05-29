@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/Card";
 export default function Loading() {
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-6">
         <Skeleton className="h-8 w-28 mb-2" />
         <Skeleton className="h-4 w-64" />
       </div>
@@ -13,7 +13,7 @@ export default function Loading() {
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {[...Array(12)].map((_, i) => (
-          <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
+          <div key={i} className="rounded-lg border border-gray-800 bg-gray-900/30 p-4">
             <div className="flex items-start justify-between mb-2">
               <div>
                 <Skeleton className="h-3 w-20 mb-1.5" />

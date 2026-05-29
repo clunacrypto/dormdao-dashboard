@@ -51,7 +51,7 @@ export function AllSchoolDocuments() {
   if (loading) return (
     <div className="space-y-4">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 h-24 animate-pulse" />
+        <div key={i} className="rounded-lg border border-gray-800 bg-gray-900/30 h-24 animate-pulse" />
       ))}
     </div>
   );
@@ -71,7 +71,7 @@ export function AllSchoolDocuments() {
   return (
     <div className="space-y-6">
       {[...bySchool.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([school, schoolDocs]) => (
-        <div key={school} className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+        <div key={school} className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-3">
             <SchoolLogo name={school} size={24} />
             <Link href={`/schools/${slugify(school)}`} className="text-sm font-semibold text-white hover:text-primary transition-colors">

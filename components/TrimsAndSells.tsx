@@ -79,7 +79,7 @@ export function TrimsAndSells() {
   const filtered = schoolFilter ? changes.filter(c => c.school_name === schoolFilter) : changes;
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-8">
+    <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden mb-8">
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
         <div className="flex items-center gap-2">
           <TrendingDown className="w-4 h-4 text-danger" />

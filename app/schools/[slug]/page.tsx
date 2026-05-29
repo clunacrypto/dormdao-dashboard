@@ -72,7 +72,7 @@ async function SchoolContent({ slug }: { slug: string }) {
         <SchoolLogo name={school.name} size={48} />
         <div>
           <div className="text-xs font-mono text-gray-500 mb-1">Rank #{school.rank}</div>
-          <h1 className="text-3xl font-bold text-white">{school.name}</h1>
+          <h1 className="text-2xl font-semibold text-white">{school.name}</h1>
         </div>
       </div>
 
@@ -96,7 +96,7 @@ async function SchoolContent({ slug }: { slug: string }) {
       {/* Portfolio analytics row */}
       {(school.holdings?.length ?? 0) > 0 && (
         <div className="grid lg:grid-cols-2 gap-6 mb-6">
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+          <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
             <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio Concentration</h2>
             <PortfolioDonut holdings={school.holdings ?? []} nav={school.nav} />
           </div>
@@ -105,7 +105,7 @@ async function SchoolContent({ slug }: { slug: string }) {
       )}
 
       {/* Holdings table */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-6">
+      <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden mb-6">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-300">
             Active Holdings ({school.holdings?.length ?? 0})
@@ -145,7 +145,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ s
           <Skeleton className="h-8 w-56 mb-8" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+              <div key={i} className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
                 <Skeleton className="h-3 w-16 mb-2" />
                 <Skeleton className="h-7 w-24" />
               </div>

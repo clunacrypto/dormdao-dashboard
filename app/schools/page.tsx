@@ -6,9 +6,9 @@ export default async function SchoolsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Schools</h1>
-        <p className="text-gray-400 mt-1">All {schools.length} DormDAO member universities</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-white">Schools</h1>
+        <p className="text-gray-500 mt-1 text-sm">All {schools.length} DormDAO member universities</p>
       </div>
       <SchoolsClient initialSchools={schools} />
     </div>

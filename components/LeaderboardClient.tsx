@@ -125,39 +125,40 @@ export function LeaderboardClient({
   const totalNAV = schools.reduce((s, x) => s + x.nav, 0);
   const schoolCount = schools.length;
 
+
   return (
     <div>
       {/* Summary strip */}
-      <div className="flex items-center justify-center gap-12 mb-8 px-1">
+      <div className="flex items-center justify-center gap-12 mb-10 px-1">
         <div className="text-center">
-          <div className="text-xs text-gray-500 mb-0.5">Total DAO NAV</div>
-          <div className="text-2xl font-bold font-mono text-white">{formatUSD(totalNAV)}</div>
+          <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-medium">Total DAO NAV</div>
+          <div className="text-2xl font-semibold font-mono text-white">{formatUSD(totalNAV)}</div>
         </div>
-        <div className="w-px h-10 bg-gray-800" />
+        <div className="w-px h-8 bg-gray-800" />
         <div className="text-center">
-          <div className="text-xs text-gray-500 mb-0.5">Active Schools</div>
-          <div className="text-2xl font-bold font-mono text-white">{schoolCount}</div>
+          <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-medium">Active Schools</div>
+          <div className="text-2xl font-semibold font-mono text-white">{schoolCount}</div>
         </div>
-        <div className="w-px h-10 bg-gray-800" />
+        <div className="w-px h-8 bg-gray-800" />
         <div className="text-center">
-          <div className="text-xs text-gray-500 mb-0.5">Win Rate (ETH)</div>
-          <div className="text-2xl font-bold font-mono text-white">
+          <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-medium">Win Rate (ETH)</div>
+          <div className="text-2xl font-semibold font-mono text-white">
             {schoolCount > 0 ? Math.round((schools.filter(s => s.ethReturn > 0).length / schoolCount) * 100) : 0}%
           </div>
         </div>
       </div>
 
       {/* Year tabs */}
-      <div className="flex gap-1.5 mb-0 border-b border-gray-800">
+      <div className="flex gap-0 mb-0 border-b border-gray-800">
         {YEARS.map((y) => (
           <button
             key={y.key}
             onClick={() => { setYear(y.key); setSortKey("rank"); setAsc(true); }}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+              "px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors",
               year === y.key
-                ? "border-primary text-primary"
-                : "border-transparent text-gray-400 hover:text-white"
+                ? "border-primary text-white font-medium"
+                : "border-transparent text-gray-500 hover:text-gray-300 font-normal"
             )}
           >
             {y.label}
@@ -166,7 +167,7 @@ export function LeaderboardClient({
       </div>
 
       {/* Table */}
-      <div className="rounded-b-xl border border-t-0 border-gray-800 bg-gray-900/50 overflow-hidden">
+      <div className="rounded-b-lg border border-t-0 border-gray-800 bg-gray-900/30 overflow-hidden">
         {activeSchools !== null ? (
           <LeaderboardTable
             schools={activeSchools}

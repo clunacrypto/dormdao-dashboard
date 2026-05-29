@@ -137,17 +137,17 @@ export function DashboardClient({
 
       {/* Analytics row */}
       <div className="grid grid-cols-3 gap-3 mb-8">
-        <div className="rounded-xl border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
           <span className="text-xs text-gray-500 mb-1">Win Rate</span>
           <span className="text-lg font-mono font-bold text-white">{winRate}%</span>
           <span className="text-xs text-gray-600 mt-0.5">{ethReturns.filter((r) => r > 0).length}/{ethReturns.length} schools positive</span>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
           <span className="text-xs text-gray-500 mb-1">Sharpe Ratio</span>
           <span className={`text-lg font-mono font-bold ${typeof sharpe === "string" || parseFloat(sharpe) >= 1 ? "text-primary" : parseFloat(sharpe) >= 0 ? "text-white" : "text-danger"}`}>{sharpe}</span>
           <span className="text-xs text-gray-600 mt-0.5">ETH return / std dev</span>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 px-4 py-3 flex flex-col">
           <span className="text-xs text-gray-500 mb-1">Schools</span>
           <span className="text-lg font-mono font-bold text-white">{activeSchools.length}</span>
           <span className="text-xs text-gray-600 mt-0.5">active portfolios</span>
@@ -156,11 +156,11 @@ export function DashboardClient({
 
       {/* Charts row 1 */}
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio NAV by School (Ranked)</h2>
           <NavBarChart schools={activeSchools} />
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">ETH Return — All Schools</h2>
           <EthReturnChart schools={activeSchools} />
         </div>
@@ -168,18 +168,18 @@ export function DashboardClient({
 
       {/* Charts row 2 */}
       <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">Top &amp; Bottom 3 — ETH Return</h2>
           <TopBottomChart schools={activeSchools} />
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
+        <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">Deployment % vs. NAV</h2>
           <DeploymentScatter schools={activeSchools} />
         </div>
       </div>
 
       {/* Leaderboard */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-6">
+      <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden mb-6">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-300">
             School Leaderboard — All {activeSchools.length}

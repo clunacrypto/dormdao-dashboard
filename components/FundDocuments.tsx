@@ -57,7 +57,7 @@ export function FundDocuments({ ticker, refreshKey = 0 }: { ticker: string; refr
   if (loading || docs.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-6">
+    <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden mb-6">
       <div className="px-5 py-4 border-b border-gray-800">
         <h2 className="text-sm font-semibold text-gray-300">Fund Documents</h2>
       </div>
