@@ -4,8 +4,7 @@ import Link from "next/link";
 import { formatUSD, formatPct } from "@/lib/utils";
 import { getSchoolsData } from "@/lib/cache";
 import { KpiCard, Skeleton } from "@/components/ui/Card";
-import { AddNoteForm } from "@/components/notes/AddNoteForm";
-import { SchoolNoteList } from "@/components/SchoolNoteList";
+import { SchoolDocuments } from "@/components/SchoolDocuments";
 import { HoldingsTableClient } from "@/components/HoldingsTableClient";
 import { PortfolioDonut } from "@/components/charts/PortfolioDonut";
 import { PortfolioInsightsClient } from "@/components/PortfolioInsightsClient";
@@ -15,21 +14,6 @@ import { SCHOOL_SOCIALS } from "@/lib/schoolData";
 import { ArrowLeft, Globe, X, Link2, Camera, MessageSquare, Send, Code2 } from "lucide-react";
 import { SchoolHistory } from "@/components/SchoolHistory";
 
-async function getNotes(school: string) {
-  try {
-    const { createServiceClient } = await import("@/lib/supabase/server");
-    const supabase = createServiceClient();
-    const { data } = await supabase
-      .from("research_notes")
-      .select("*")
-      .ilike("school", `%${school}%`)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    return data ?? [];
-  } catch {
-    return [];
-  }
-}
 
 function SocialLinks({ name }: { name: string }) {
   const socials = SCHOOL_SOCIALS[name];
@@ -69,8 +53,6 @@ async function SchoolContent({ slug }: { slug: string }) {
   const { schools, fetchedAt } = await getSchoolsData();
   const school = schools.find((s) => s.slug === slug) ?? null;
   if (!school) notFound();
-
-  const notes = await getNotes(school.name);
 
   const otherSchools: Record<string, string[]> = {};
   for (const h of school.holdings ?? []) {
@@ -140,16 +122,7 @@ async function SchoolContent({ slug }: { slug: string }) {
         )}
       </div>
 
-      <div>
-        <h2 className="text-sm font-semibold text-gray-300 mb-4">Research Notes for {school.name}</h2>
-        <AddNoteForm
-          defaultSchool={school.name}
-          tickers={school.holdings?.map((h) => h.ticker) ?? []}
-        />
-        <div className="mt-4">
-          <SchoolNoteList initialNotes={notes} schoolName={school.name} />
-        </div>
-      </div>
+      <SchoolDocuments schoolName={school.name} />
 
       {/* Portfolio History */}
       <div className="mb-6">

@@ -11,14 +11,14 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    const ticker = (formData.get("ticker") as string | null)?.toUpperCase();
+    const ticker = (formData.get("ticker") as string | null)?.toUpperCase() || "SCHOOL";
     const title = formData.get("title") as string | null;
     const school = formData.get("school") as string | null;
     const documentDate = formData.get("document_date") as string | null;
     const documentType = (formData.get("document_type") as string | null) ?? "report";
 
-    if (!file || !ticker || !title) {
-      return NextResponse.json({ error: "file, ticker, and title are required" }, { status: 400 });
+    if (!file || !title) {
+      return NextResponse.json({ error: "file and title are required" }, { status: 400 });
     }
 
     const supabase = createServiceClient();
