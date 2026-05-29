@@ -98,7 +98,6 @@ export function HoldingsTableClient({ holdings, otherSchools, schoolName = "scho
             <th className="text-right px-5 py-3">P&amp;L (USD)</th>
             <th className="text-right px-5 py-3">ROI (ETH)</th>
             <th className="text-right px-5 py-3">% Port.</th>
-            <th className="text-right px-5 py-3">Also held by</th>
             <th className="text-right px-5 py-3">Date</th>
           </tr>
         </thead>
@@ -179,22 +178,6 @@ export function HoldingsTableClient({ holdings, otherSchools, schoolName = "scho
                 </td>
                 <td className="px-5 py-3 text-right font-mono text-gray-300">
                   {h.pctOfPortfolio > 0 ? `${h.pctOfPortfolio.toFixed(1)}%` : "—"}
-                </td>
-                <td className="px-5 py-3 text-right">
-                  {others.length > 0 ? (
-                    <div className="flex flex-wrap gap-1 justify-end">
-                      {others.slice(0, 3).map((s, j) => (
-                        <span key={j} className="text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded">
-                          {abbrev(s)}
-                        </span>
-                      ))}
-                      {others.length > 3 && (
-                        <span className="text-xs text-gray-500">+{others.length - 3}</span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-gray-600 text-xs">—</span>
-                  )}
                 </td>
                 <td className="px-5 py-3 text-right text-gray-500 text-xs">
                   {h.investmentDate || "—"}
