@@ -64,9 +64,6 @@ export async function POST(req: NextRequest) {
   if (!author_name?.trim()) {
     return NextResponse.json({ error: "Author name required" }, { status: 400 });
   }
-  if (!token_ticker?.trim()) {
-    return NextResponse.json({ error: "Token is required" }, { status: 400 });
-  }
   const minLen = url?.trim() ? 10 : 100;
   if (!content || content.trim().length < minLen) {
     return NextResponse.json(
@@ -87,7 +84,7 @@ export async function POST(req: NextRequest) {
   const insertPayload: Record<string, unknown> = {
     author_name: author_name.trim(),
     school: school?.trim() || null,
-    token_ticker: token_ticker.trim().toUpperCase(),
+    token_ticker: token_ticker?.trim().toUpperCase() || null,
     sentiment,
     content: content.trim(),
     user_id: user_id || null,

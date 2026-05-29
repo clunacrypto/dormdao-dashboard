@@ -96,7 +96,6 @@ export function AddNoteForm({
   const charCount = form.content.length;
   const valid =
     form.author_name.trim().length > 0 &&
-    form.token_ticker.trim().length > 0 &&
     charCount >= minChars &&
     charCount <= 2000;
 
@@ -182,23 +181,17 @@ export function AddNoteForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Token *</label>
+          <label className="block text-xs text-gray-400 mb-1">Token</label>
           <select
             value={form.token_ticker}
             onChange={(e) => setForm((f) => ({ ...f, token_ticker: e.target.value }))}
-            className={cn(
-              "w-full bg-gray-800 border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50",
-              submitAttempted && !form.token_ticker ? "border-red-500/70" : !form.token_ticker ? "border-amber-600/50" : "border-gray-700"
-            )}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
           >
-            <option value="">— Select token (required) —</option>
+            <option value="">— Optional —</option>
             {availableTickers.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
-          {submitAttempted && !form.token_ticker && (
-            <p className="text-xs text-red-400 mt-1">Please select a token to continue.</p>
-          )}
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Sentiment *</label>
