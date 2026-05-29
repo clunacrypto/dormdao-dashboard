@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getSchoolsData } from "@/lib/cache";
 import { Holding } from "@/lib/types";
@@ -16,151 +17,109 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const supabaseCheck = createServiceClient();
-    const { data: recent } = await supabaseCheck
-      .from("portfolio_snapshots")
-      .select("captured_at")
-      .order("captured_at", { ascending: false })
-      .limit(1)
-      .single();
+  // Respond immediately so cron-job.org doesn't time out waiting.
+  // All actual work runs after the response is sent via after().
+  after(async () => {
+    try {
+      const supabase = createServiceClient();
+      const { data: recent } = await supabase
+        .from("portfolio_snapshots")
+        .select("captured_at")
+        .order("captured_at", { ascending: false })
+        .limit(1)
+        .single();
 
-    if (recent) {
-      const ageMs = Date.now() - new Date(recent.captured_at).getTime();
-      if (ageMs < 50 * 60 * 1000) {
-        return NextResponse.json({
-          skipped: true,
-          reason: `Last snapshot was ${Math.round(ageMs / 60000)} minutes ago — waiting for 50min cooldown`,
-        });
+      if (recent) {
+        const ageMs = Date.now() - new Date(recent.captured_at).getTime();
+        if (ageMs < 50 * 60 * 1000) return; // cooldown not elapsed
       }
-    }
 
-    const { schools } = await getSchoolsData();
-    const supabase = supabaseCheck;
+      const { schools } = await getSchoolsData();
 
-    // Get the most recent snapshot per school for change detection
-    const { data: prevSnapshots } = await supabase
-      .from("portfolio_snapshots")
-      .select("school_name, holdings, captured_at")
-      .order("captured_at", { ascending: false })
-      .limit(schools.length * 3);
+      const { data: prevSnapshots } = await supabase
+        .from("portfolio_snapshots")
+        .select("school_name, holdings, captured_at")
+        .order("captured_at", { ascending: false })
+        .limit(schools.length * 3);
 
-    const prevBySchool: Record<string, StoredHolding[]> = {};
-    if (prevSnapshots) {
-      for (const snap of prevSnapshots) {
-        if (!prevBySchool[snap.school_name]) {
-          prevBySchool[snap.school_name] = (snap.holdings as StoredHolding[]) ?? [];
-        }
-      }
-    }
-
-    // Build snapshot rows
-    const snapRows = schools.map(s => ({
-      school_name: s.name,
-      nav_usd: s.nav,
-      eth_return_pct: s.ethReturn,
-      usd_return_pct: s.usdReturn,
-      deployed_pct: s.pctDeployed,
-      holdings: (s.holdings ?? []).map((h: Holding) => ({
-        ticker: h.ticker,
-        tokens: h.tokens,
-        costBasisEth: h.costBasisEth,
-        blockchain: h.blockchain,
-        investmentDate: h.investmentDate,
-      })),
-    }));
-
-    const { error: snapError } = await supabase
-      .from("portfolio_snapshots")
-      .insert(snapRows);
-
-    if (snapError) {
-      return NextResponse.json({ error: snapError.message }, { status: 500 });
-    }
-
-    // Detect changes by comparing with previous snapshot
-    const detectedAt = new Date().toISOString();
-    const changeRows: Array<{
-      school_name: string;
-      change_type: string;
-      token_ticker: string;
-      old_quantity?: number;
-      new_quantity?: number;
-      eth_value?: number;
-      detected_at: string;
-    }> = [];
-
-    for (const school of schools) {
-      const prev = prevBySchool[school.name];
-      if (!prev || prev.length === 0) continue;
-
-      const prevMap = new Map(prev.map((h: StoredHolding) => [h.ticker, h]));
-      const currHoldings = school.holdings ?? [];
-      const currMap = new Map(currHoldings.map((h: Holding) => [h.ticker, h]));
-
-      // New buys and size changes
-      for (const [ticker, h] of currMap) {
-        const prevH = prevMap.get(ticker);
-        if (!prevH) {
-          changeRows.push({
-            school_name: school.name,
-            change_type: "buy",
-            token_ticker: ticker,
-            new_quantity: h.tokens,
-            eth_value: h.costBasisEth,
-            detected_at: detectedAt,
-          });
-        } else if (h.tokens > prevH.tokens * 1.02) {
-          changeRows.push({
-            school_name: school.name,
-            change_type: "increase",
-            token_ticker: ticker,
-            old_quantity: prevH.tokens,
-            new_quantity: h.tokens,
-            eth_value: h.costBasisEth,
-            detected_at: detectedAt,
-          });
-        } else if (h.tokens < prevH.tokens * 0.98) {
-          changeRows.push({
-            school_name: school.name,
-            change_type: "decrease",
-            token_ticker: ticker,
-            old_quantity: prevH.tokens,
-            new_quantity: h.tokens,
-            eth_value: h.costBasisEth,
-            detected_at: detectedAt,
-          });
+      const prevBySchool: Record<string, StoredHolding[]> = {};
+      if (prevSnapshots) {
+        for (const snap of prevSnapshots) {
+          if (!prevBySchool[snap.school_name]) {
+            prevBySchool[snap.school_name] = (snap.holdings as StoredHolding[]) ?? [];
+          }
         }
       }
 
-      // Sells (position fully removed)
-      for (const [ticker, prevH] of prevMap) {
-        if (!currMap.has(ticker)) {
-          changeRows.push({
-            school_name: school.name,
-            change_type: "sell",
-            token_ticker: ticker,
-            old_quantity: prevH.tokens,
-            detected_at: detectedAt,
-          });
+      const snapRows = schools.map(s => ({
+        school_name: s.name,
+        nav_usd: s.nav,
+        eth_return_pct: s.ethReturn,
+        usd_return_pct: s.usdReturn,
+        deployed_pct: s.pctDeployed,
+        holdings: (s.holdings ?? []).map((h: Holding) => ({
+          ticker: h.ticker,
+          tokens: h.tokens,
+          costBasisEth: h.costBasisEth,
+          blockchain: h.blockchain,
+          investmentDate: h.investmentDate,
+        })),
+      }));
+
+      const { error: snapError } = await supabase
+        .from("portfolio_snapshots")
+        .insert(snapRows);
+      if (snapError) {
+        console.error("[snapshot] insert error:", snapError.message);
+        return;
+      }
+
+      const detectedAt = new Date().toISOString();
+      const changeRows: Array<{
+        school_name: string;
+        change_type: string;
+        token_ticker: string;
+        old_quantity?: number;
+        new_quantity?: number;
+        eth_value?: number;
+        detected_at: string;
+      }> = [];
+
+      for (const school of schools) {
+        const prev = prevBySchool[school.name];
+        if (!prev || prev.length === 0) continue;
+
+        const prevMap = new Map(prev.map((h: StoredHolding) => [h.ticker, h]));
+        const currHoldings = school.holdings ?? [];
+        const currMap = new Map(currHoldings.map((h: Holding) => [h.ticker, h]));
+
+        for (const [ticker, h] of currMap) {
+          const prevH = prevMap.get(ticker);
+          if (!prevH) {
+            changeRows.push({ school_name: school.name, change_type: "buy", token_ticker: ticker, new_quantity: h.tokens, eth_value: h.costBasisEth, detected_at: detectedAt });
+          } else if (h.tokens > prevH.tokens * 1.02) {
+            changeRows.push({ school_name: school.name, change_type: "increase", token_ticker: ticker, old_quantity: prevH.tokens, new_quantity: h.tokens, eth_value: h.costBasisEth, detected_at: detectedAt });
+          } else if (h.tokens < prevH.tokens * 0.98) {
+            changeRows.push({ school_name: school.name, change_type: "decrease", token_ticker: ticker, old_quantity: prevH.tokens, new_quantity: h.tokens, eth_value: h.costBasisEth, detected_at: detectedAt });
+          }
+        }
+
+        for (const [ticker, prevH] of prevMap) {
+          if (!currMap.has(ticker)) {
+            changeRows.push({ school_name: school.name, change_type: "sell", token_ticker: ticker, old_quantity: prevH.tokens, detected_at: detectedAt });
+          }
         }
       }
-    }
 
-    if (changeRows.length > 0) {
-      await supabase.from("portfolio_changes").insert(changeRows);
+      if (changeRows.length > 0) {
+        await supabase.from("portfolio_changes").insert(changeRows);
+      }
+    } catch (err) {
+      console.error("[snapshot] unexpected error:", err);
     }
+  });
 
-    return NextResponse.json({
-      success: true,
-      snapshotCount: snapRows.length,
-      changesDetected: changeRows.length,
-      changes: changeRows,
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
+  return NextResponse.json({ accepted: true });
 }
 
 export async function GET(req: NextRequest) {
