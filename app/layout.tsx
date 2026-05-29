@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 import { Navbar } from "@/components/Navbar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "@/components/ui/Toaster";
@@ -28,10 +31,8 @@ export default function RootLayout({
           rel="icon"
           href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%231D9E75'/><text x='50' y='68' font-family='Arial' font-size='44' font-weight='bold' text-anchor='middle' fill='white'>DD</text></svg>"
         />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className="min-h-screen bg-[#0a0a0a] text-gray-100 antialiased">
+      <body className={`${inter.className} min-h-screen bg-[#0a0a0a] text-gray-100 antialiased`}>
         <ThemeProvider>
           <Navbar />
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
