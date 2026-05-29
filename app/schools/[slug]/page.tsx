@@ -4,23 +4,17 @@ import Link from "next/link";
 import { formatUSD, formatPct } from "@/lib/utils";
 import { getSchoolsData } from "@/lib/cache";
 import { KpiCard, Skeleton } from "@/components/ui/Card";
-import { SchoolDocuments } from "@/components/SchoolDocuments";
-import { HoldingsTableClient } from "@/components/HoldingsTableClient";
-import { PortfolioDonut } from "@/components/charts/PortfolioDonut";
-import { PortfolioInsightsClient } from "@/components/PortfolioInsightsClient";
+import { SchoolTabs } from "@/components/SchoolTabs";
 import { SyncFooter } from "@/components/SyncFooter";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { SCHOOL_SOCIALS } from "@/lib/schoolData";
 import { ArrowLeft, Globe, X, Link2, Camera, MessageSquare, Send, Code2 } from "lucide-react";
-import { SchoolHistory } from "@/components/SchoolHistory";
-
 
 function SocialLinks({ name }: { name: string }) {
   const socials = SCHOOL_SOCIALS[name];
   if (!socials) return null;
 
   const links: { href: string; icon: React.ReactNode; label: string }[] = [];
-
   if (socials.website)   links.push({ href: socials.website,   icon: <Globe className="w-3.5 h-3.5" />,         label: "Website" });
   if (socials.twitter)   links.push({ href: socials.twitter,   icon: <X className="w-3.5 h-3.5" />,             label: "Twitter" });
   if (socials.linkedin)  links.push({ href: socials.linkedin,  icon: <Link2 className="w-3.5 h-3.5" />,         label: "LinkedIn" });
@@ -28,7 +22,6 @@ function SocialLinks({ name }: { name: string }) {
   if (socials.discord)   links.push({ href: socials.discord,   icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Discord" });
   if (socials.telegram)  links.push({ href: socials.telegram,  icon: <Send className="w-3.5 h-3.5" />,          label: "Telegram" });
   if (socials.github)    links.push({ href: socials.github,    icon: <Code2 className="w-3.5 h-3.5" />,         label: "GitHub" });
-
   if (links.length === 0) return null;
 
   return (
@@ -68,6 +61,7 @@ async function SchoolContent({ slug }: { slug: string }) {
         <ArrowLeft className="w-4 h-4" /> Back to Schools
       </Link>
 
+      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <SchoolLogo name={school.name} size={48} />
         <div>
@@ -78,7 +72,8 @@ async function SchoolContent({ slug }: { slug: string }) {
 
       <SocialLinks name={school.name} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* KPI cards — always visible above tabs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <KpiCard label="NAV" value={formatUSD(school.nav)} />
         <KpiCard
           label="USD Return"
@@ -93,42 +88,8 @@ async function SchoolContent({ slug }: { slug: string }) {
         <KpiCard label="% Deployed" value={formatPct(school.pctDeployed)} />
       </div>
 
-      {/* Portfolio analytics row */}
-      {(school.holdings?.length ?? 0) > 0 && (
-        <div className="grid lg:grid-cols-2 gap-6 mb-6">
-          <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-5">
-            <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio Concentration</h2>
-            <PortfolioDonut holdings={school.holdings ?? []} nav={school.nav} />
-          </div>
-          <PortfolioInsightsClient holdings={school.holdings ?? []} rank={school.rank} />
-        </div>
-      )}
-
-      {/* Holdings table */}
-      <div className="rounded-lg border border-gray-800 bg-gray-900/30 overflow-hidden mb-6">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <h2 className="text-sm font-semibold text-gray-300">
-            Active Holdings ({school.holdings?.length ?? 0})
-          </h2>
-        </div>
-        {school.holdings && school.holdings.length > 0 ? (
-          <HoldingsTableClient
-            holdings={school.holdings}
-            otherSchools={otherSchools}
-            schoolName={school.name}
-          />
-        ) : (
-          <p className="px-5 py-6 text-sm text-gray-500">No holdings data available for this school.</p>
-        )}
-      </div>
-
-      <SchoolDocuments schoolName={school.name} />
-
-      {/* Portfolio History */}
-      <div className="mb-6">
-        <h2 className="text-sm font-semibold text-gray-300 mb-4">Portfolio History</h2>
-        <SchoolHistory schoolName={school.name} />
-      </div>
+      {/* Tabbed content */}
+      <SchoolTabs school={school} otherSchools={otherSchools} />
 
       <SyncFooter fetchedAt={fetchedAt} />
     </>

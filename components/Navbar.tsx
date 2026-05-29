@@ -101,51 +101,52 @@ export function Navbar() {
             })}
           </div>
 
-          {/* Theme toggle */}
-          <button
-            onClick={toggle}
-            aria-label="Toggle theme"
-            className={cn(
-              "flex items-center justify-center w-8 h-8 rounded-md border transition-colors duration-200 shrink-0",
-              theme === "dark"
-                ? "border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 hover:bg-gray-800"
-                : "border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 hover:bg-gray-100"
-            )}
-          >
-            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          {/* User avatar / sign-in */}
-          {user ? (
-            <Link href="/profile" aria-label="Your profile">
-              {(profileAvatar ?? user.user_metadata?.avatar_url) ? (
-                <Image
-                  src={(profileAvatar ?? user.user_metadata?.avatar_url) as string}
-                  width={30}
-                  height={30}
-                  alt="avatar"
-                  className="rounded-lg border border-gray-700 hover:border-primary/60 transition-colors shrink-0 object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-[30px] h-[30px] rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center shrink-0 hover:bg-primary/30 transition-colors">
-                  <User className="w-3.5 h-3.5 text-primary" />
-                </div>
-              )}
-            </Link>
-          ) : (
-            <Link
-              href="/login"
+          {/* Right controls — toggle + user */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={toggle}
+              aria-label="Toggle theme"
               className={cn(
-                "text-xs font-medium px-3 py-1.5 rounded-md border transition-colors shrink-0",
+                "flex items-center justify-center w-8 h-8 rounded-md border transition-colors duration-200",
                 theme === "dark"
-                  ? "border-gray-700 text-gray-400 hover:text-white hover:border-gray-600"
-                  : "border-gray-300 text-gray-500 hover:text-gray-800 hover:border-gray-400"
+                  ? "border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 hover:bg-gray-800"
+                  : "border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400 hover:bg-gray-100"
               )}
             >
-              Sign in
-            </Link>
-          )}
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            {user ? (
+              <Link href="/profile" aria-label="Your profile">
+                {(profileAvatar ?? user.user_metadata?.avatar_url) ? (
+                  <Image
+                    src={(profileAvatar ?? user.user_metadata?.avatar_url) as string}
+                    width={30}
+                    height={30}
+                    alt="avatar"
+                    className="rounded-lg border border-gray-700 hover:border-primary/60 transition-colors object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-[30px] h-[30px] rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center hover:bg-primary/30 transition-colors">
+                    <User className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                )}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className={cn(
+                  "text-xs font-medium px-3 py-1.5 rounded-md border transition-colors",
+                  theme === "dark"
+                    ? "border-gray-700 text-gray-400 hover:text-white hover:border-gray-600"
+                    : "border-gray-300 text-gray-500 hover:text-gray-800 hover:border-gray-400"
+                )}
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
 
         </div>
       </div>
