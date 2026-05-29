@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SchoolLogo } from "@/components/SchoolLogo";
 import { TOKEN_META } from "@/lib/tokens";
+import { formatUSD } from "@/lib/utils";
 import { TrendingDown } from "lucide-react";
 
 interface ChangeRow {
@@ -31,24 +32,51 @@ function formatQty(n: number | null) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
+// pnlBySchool[schoolName][ticker] = { gainUsd, roiUsdPct }
+type PnlMap = Record<string, Record<string, { gainUsd: number; roiUsdPct: number }>>;
+
 export function TrimsAndSells() {
   const [changes, setChanges] = useState<ChangeRow[]>([]);
+  const [pnlMap, setPnlMap] = useState<PnlMap>({});
   const [loading, setLoading] = useState(true);
   const [schoolFilter, setSchoolFilter] = useState("");
 
   useEffect(() => {
-    fetch("/api/changes?type=trim")
-      .then(r => r.json())
-      .then(d => setChanges(d.changes ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const fetchAll = async () => {
+      try {
+        const [changesRes, sheetsRes] = await Promise.all([
+          fetch("/api/changes?type=trim").then(r => r.json()),
+          fetch("/api/sheets").then(r => r.json()),
+        ]);
+        setChanges(changesRes.changes ?? []);
+
+        // Build P&L lookup from both active and exited holdings
+        const map: PnlMap = {};
+        for (const school of sheetsRes.schools ?? []) {
+          const byTicker: Record<string, { gainUsd: number; roiUsdPct: number }> = {};
+          for (const h of school.holdings ?? []) {
+            if (h.gainUsd !== undefined) {
+              byTicker[h.ticker] = { gainUsd: h.gainUsd, roiUsdPct: h.roiUsdPct ?? 0 };
+            }
+          }
+          for (const h of school.exitedHoldings ?? []) {
+            // exited holdings take priority for sell events
+            byTicker[h.ticker] = { gainUsd: h.gainUsd, roiUsdPct: h.roiUsdPct };
+          }
+          map[school.name] = byTicker;
+        }
+        setPnlMap(map);
+      } catch {
+        /* ignore */
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
   }, []);
 
   const uniqueSchools = [...new Set(changes.map(c => c.school_name))].sort();
-
-  const filtered = schoolFilter
-    ? changes.filter(c => c.school_name === schoolFilter)
-    : changes;
+  const filtered = schoolFilter ? changes.filter(c => c.school_name === schoolFilter) : changes;
 
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden mb-8">
@@ -78,7 +106,7 @@ export function TrimsAndSells() {
         <div className="px-5 py-8 text-center text-sm text-gray-500">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="px-5 py-8 text-center text-sm text-gray-500">
-          No trims detected yet — checked daily via snapshots.
+          No trims detected yet — checked hourly via snapshots.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -91,6 +119,8 @@ export function TrimsAndSells() {
                 <th className="text-right px-5 py-3">Before</th>
                 <th className="text-right px-5 py-3">After</th>
                 <th className="text-right px-5 py-3">Tokens Sold</th>
+                <th className="text-right px-5 py-3">P&amp;L (USD)</th>
+                <th className="text-right px-5 py-3">ROI</th>
                 <th className="text-right px-5 py-3">Detected</th>
               </tr>
             </thead>
@@ -101,6 +131,7 @@ export function TrimsAndSells() {
                   ? c.old_quantity - c.new_quantity
                   : c.old_quantity;
                 const isFull = c.change_type === "sell";
+                const pnl = pnlMap[c.school_name]?.[c.token_ticker] ?? null;
 
                 return (
                   <tr key={c.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
@@ -138,6 +169,24 @@ export function TrimsAndSells() {
                     </td>
                     <td className="px-5 py-3 text-right font-mono text-danger text-xs">
                       -{formatQty(sold)}
+                    </td>
+                    <td className="px-5 py-3 text-right font-mono text-xs">
+                      {pnl !== null ? (
+                        <span className={pnl.gainUsd >= 0 ? "text-primary" : "text-danger"}>
+                          {pnl.gainUsd >= 0 ? "+" : ""}{formatUSD(pnl.gainUsd)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-right font-mono text-xs">
+                      {pnl !== null && pnl.roiUsdPct !== 0 ? (
+                        <span className={pnl.roiUsdPct >= 0 ? "text-primary" : "text-danger"}>
+                          {pnl.roiUsdPct >= 0 ? "+" : ""}{pnl.roiUsdPct.toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">—</span>
+                      )}
                     </td>
                     <td className="px-5 py-3 text-right text-gray-500 text-xs">
                       {c.detected_at ? formatDate(c.detected_at) : "—"}

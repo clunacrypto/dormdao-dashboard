@@ -1,6 +1,6 @@
 import Papa from "papaparse";
-import { SchoolRow, Holding } from "@/lib/types";
-export type { Holding } from "@/lib/types";
+import { SchoolRow, Holding, ExitedHolding } from "@/lib/types";
+export type { Holding, ExitedHolding } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
 const SHEET_ID = "1wA8KoPlhZ1YYv6auM5yYlzjYCBRnG9en9i_qLsrlVZs";
@@ -24,6 +24,7 @@ function tabToDisplayName(tabName: string): string {
 
 export interface SchoolRowWithHoldings extends SchoolRow {
   holdings: Holding[];
+  exitedHoldings: ExitedHolding[];
 }
 
 function parseNumber(raw: string | undefined): number {
@@ -266,6 +267,79 @@ function parseHoldings(data: string[][]): Holding[] {
   return holdings;
 }
 
+function parseExitedHoldings(data: string[][]): ExitedHolding[] {
+  // Find "Liquid Positions (Exited/Trimmed)" section marker
+  let sectionStart = -1;
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].some((c) => c?.trim() === "Liquid Positions (Exited/Trimmed)")) {
+      sectionStart = i;
+      break;
+    }
+  }
+  if (sectionStart === -1) return [];
+
+  // Find the column header row within 5 rows (same "Position" marker as active section)
+  let colHeaderIdx = -1;
+  for (let i = sectionStart + 1; i < Math.min(sectionStart + 6, data.length); i++) {
+    if (data[i].some((c) => c?.trim() === "Position")) {
+      colHeaderIdx = i;
+      break;
+    }
+  }
+  if (colHeaderIdx === -1) return [];
+
+  // Use same positional defaults as active section
+  const headers = data[colHeaderIdx].map((h) => h?.trim().toLowerCase());
+  let posIdx = 1;
+  let costIdx = 11;
+  let gainIdx = 16;
+  let roiIdx = 15;
+  let roiEthIdx = 14;
+
+  const foundPos = headers.findIndex((h) => h === "position");
+  if (foundPos !== -1) posIdx = foundPos;
+  const foundCost = headers.findIndex((h) => h.includes("cost basis (eth)") || h.includes("cost basis eth"));
+  if (foundCost !== -1) {
+    costIdx = foundCost;
+    gainIdx = costIdx + 5;
+    roiIdx = costIdx + 4;
+    roiEthIdx = costIdx + 3;
+  }
+
+  const results: ExitedHolding[] = [];
+  for (let i = colHeaderIdx + 1; i < data.length; i++) {
+    const row = data[i];
+    const rawTicker = row[posIdx]?.trim();
+    if (!rawTicker) continue;
+    if (rawTicker === "NFT Positions" || rawTicker.startsWith("Member")) break;
+    if (rawTicker.includes("#") || rawTicker.length > 20) continue;
+
+    // Try gainIdx, then gainIdx+1 in case exit date shifts columns by one
+    let gainRaw = isValue(row[gainIdx]) ? row[gainIdx]?.trim() : undefined;
+    if (!gainRaw?.includes("$") && gainIdx + 1 < row.length && isValue(row[gainIdx + 1])) {
+      gainRaw = row[gainIdx + 1]?.trim();
+    }
+    let roiRaw = isValue(row[roiIdx]) ? row[roiIdx]?.trim() : undefined;
+    if (!roiRaw?.includes("%") && roiIdx + 1 < row.length && isValue(row[roiIdx + 1])) {
+      roiRaw = row[roiIdx + 1]?.trim();
+    }
+    let roiEthRaw = isValue(row[roiEthIdx]) ? row[roiEthIdx]?.trim() : undefined;
+    if (!roiEthRaw?.includes("%") && roiEthIdx + 1 < row.length && isValue(row[roiEthIdx + 1])) {
+      roiEthRaw = row[roiEthIdx + 1]?.trim();
+    }
+
+    if (gainRaw?.includes("$")) {
+      results.push({
+        ticker: rawTicker.toUpperCase(),
+        gainUsd: parseNumber(gainRaw),
+        roiUsdPct: roiRaw?.includes("%") ? parseNumber(roiRaw) : 0,
+        roiEthPct: roiEthRaw?.includes("%") ? parseNumber(roiEthRaw) : 0,
+      });
+    }
+  }
+  return results;
+}
+
 export async function fetchSheetsData(): Promise<{
   schools: SchoolRowWithHoldings[];
   sinceInceptionSchools: SchoolRow[];
@@ -291,7 +365,8 @@ export async function fetchSheetsData(): Promise<{
     leaderboardEntries.map(async (entry) => {
       const tabData = await fetchSchoolTabCsv(entry.name);
       const holdings = parseHoldings(tabData);
-      return { ...entry, holdings };
+      const exitedHoldings = parseExitedHoldings(tabData);
+      return { ...entry, holdings, exitedHoldings };
     })
   );
 
@@ -308,6 +383,7 @@ export async function fetchSheetsData(): Promise<{
       avgEntryFdv: s.avgEntryFdv,
       pctDeployed: s.pctDeployed,
       holdings: s.holdings,
+      exitedHoldings: s.exitedHoldings,
     };
   });
 

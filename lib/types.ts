@@ -8,6 +8,7 @@ export interface Holding {
   investmentDate: string;
   gainUsd?: number;
   roiUsdPct?: number;
+  roiEthPct?: number;
 }
 
 export interface SchoolRow {
@@ -34,6 +35,13 @@ export interface TokenPrice {
   ticker: string;
   usd: number;
   usd_24h_change: number;
+}
+
+export interface ExitedHolding {
+  ticker: string;
+  gainUsd: number;
+  roiUsdPct: number;
+  roiEthPct: number;
 }
 
 export type Sentiment = "bullish" | "bearish" | "neutral";
