@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
 
     if (recent) {
       const ageMs = Date.now() - new Date(recent.captured_at).getTime();
-      if (ageMs < 6 * 60 * 60 * 1000) {
+      if (ageMs < 50 * 60 * 1000) {
         return NextResponse.json({
           skipped: true,
-          reason: `Last snapshot was ${Math.round(ageMs / 60000)} minutes ago — waiting for 6h cooldown`,
+          reason: `Last snapshot was ${Math.round(ageMs / 60000)} minutes ago — waiting for 50min cooldown`,
         });
       }
     }
